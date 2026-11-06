@@ -1,4 +1,4 @@
-# DATA VISULALISATION
+# DATA VISUALISATION
 
 ## Participants
 
