@@ -1,6 +1,6 @@
 .landing {
   min-height: 100svh;
-  padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 5vw, 4rem);
+  padding: 0 clamp(1rem, 5vw, 4rem) clamp(1rem, 3vw, 2rem);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -9,6 +9,8 @@
 }
 
 .landing__top {
+  min-height: 88px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -71,14 +73,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
+  gap: 0.65rem;
+  min-height: 44px;
   padding: 0 1rem;
   border-radius: 999px;
   border: 1px solid var(--border);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }
 
 .btn--primary {
