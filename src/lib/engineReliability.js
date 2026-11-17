@@ -46,86 +46,214 @@ export function pearson(pairs) {
 }
 
 /**
- * One row per constructor and era. A start is any result whose outcome is not
- * DNQ/DNS. An engine failure is a retirement whose status is in ENGINE_STATUSES.
- * Estimated points lost: each engine failure is credited with the mean points the
- * same constructor scored per finished start in that season (0 if it never finished).
+ * Final constructors' championship position per `${constructorId}:${year}`, read
+ * from the standings after the last round of each season that has standings.
  */
-export function buildEraRows(tables) {
+export function indexFinalStandings(standingsRows, races) {
+  const lastRound = new Map()
+  for (const row of standingsRows) {
+    const race = races.get(Number(row.raceId))
+    if (!race) continue
+    const current = lastRound.get(race.year)
+    if (!current || race.round > current.round) lastRound.set(race.year, race)
+  }
+  const finalRaceIds = new Map([...lastRound].map(([year, race]) => [race.raceId, year]))
+  const standings = new Map()
+  for (const row of standingsRows) {
+    const year = finalRaceIds.get(Number(row.raceId))
+    const position = Number(row.position)
+    if (year === undefined || !Number.isFinite(position) || position <= 0) continue
+    standings.set(`${Number(row.constructorId)}:${year}`, position)
+  }
+  return standings
+}
+
+function classify(tables, result) {
+  const status = tables.statuses.get(result.statusId)?.status ?? null
+  const { outcome } = classifyRaceResult(result, status)
+  return {
+    status,
+    outcome,
+    isStart: outcome !== 'dnq' && outcome !== 'dns',
+    isEngineFailure: outcome === 'retired' && isEngineStatus(status),
+  }
+}
+
+/**
+ * One row per constructor-season inside ERAS. A start is any result whose outcome
+ * is not DNQ/DNS; an engine failure is a retirement with a status in ENGINE_STATUSES.
+ * avgGrid averages grid slots > 0 (0 = pit-lane or not recorded); null if none.
+ * pointsLost credits each failure with the constructor's mean points per finished
+ * start that season (0 when it never finished).
+ */
+export function buildSeasonRows(tables, finalStandings = new Map()) {
   const seasons = new Map()
   for (const result of tables.results.values()) {
     const race = tables.races.get(result.raceId)
     const era = getEra(race?.year)
     if (!era) continue
-    const status = tables.statuses.get(result.statusId)?.status ?? null
-    const { outcome } = classifyRaceResult(result, status)
-    if (outcome === 'dnq' || outcome === 'dns') continue
+    const { outcome, isStart, isEngineFailure } = classify(tables, result)
+    if (!isStart) continue
 
-    const key = `${result.constructorId}:${race.year}`
-    if (!seasons.has(key)) {
-      seasons.set(key, { constructorId: result.constructorId, era, starts: 0, failures: 0, wins: 0, points: 0, finished: 0, finishedPoints: 0 })
+    const id = `${result.constructorId}:${race.year}`
+    if (!seasons.has(id)) {
+      const constructor = tables.constructors.get(result.constructorId)
+      seasons.set(id, {
+        id,
+        constructorId: result.constructorId,
+        constructorRef: constructor?.constructorRef ?? null,
+        name: constructor?.name ?? `Constructor ${result.constructorId}`,
+        year: race.year,
+        eraId: era.id,
+        starts: 0, failures: 0, wins: 0, points: 0, finished: 0, finishedPoints: 0, gridSum: 0, gridCount: 0,
+      })
     }
-    const season = seasons.get(key)
+    const season = seasons.get(id)
     const points = result.points ?? 0
     season.starts += 1
     season.points += points
     if (result.position === 1) season.wins += 1
+    if (result.grid > 0) {
+      season.gridSum += result.grid
+      season.gridCount += 1
+    }
     if (outcome === 'finished') {
       season.finished += 1
       season.finishedPoints += points
     }
-    if (outcome === 'retired' && isEngineStatus(status)) season.failures += 1
+    if (isEngineFailure) season.failures += 1
   }
 
-  const rows = new Map()
-  for (const season of seasons.values()) {
-    const key = `${season.era.id}:${season.constructorId}`
-    if (!rows.has(key)) {
-      const constructor = tables.constructors.get(season.constructorId)
-      rows.set(key, {
-        id: key,
-        eraId: season.era.id,
-        constructorId: season.constructorId,
-        constructorRef: constructor?.constructorRef ?? null,
-        name: constructor?.name ?? `Constructor ${season.constructorId}`,
-        seasons: 0, starts: 0, failures: 0, wins: 0, points: 0, pointsLost: 0,
-      })
+  return [...seasons.values()].map(({ gridSum, gridCount, ...season }) => {
+    const finalPosition = finalStandings.get(season.id) ?? null
+    const pointsPerFinish = season.finished ? season.finishedPoints / season.finished : 0
+    return {
+      ...season,
+      avgGrid: gridCount ? gridSum / gridCount : null,
+      failureRate: season.failures / season.starts,
+      pointsPerFinish,
+      pointsLost: season.failures * pointsPerFinish,
+      finalPosition,
+      isChampion: finalPosition === 1,
     }
-    const row = rows.get(key)
-    row.seasons += 1
-    row.starts += season.starts
-    row.failures += season.failures
-    row.wins += season.wins
-    row.points += season.points
-    row.pointsLost += season.finished ? season.failures * (season.finishedPoints / season.finished) : 0
-  }
-
-  const eraPoints = new Map()
-  for (const row of rows.values()) eraPoints.set(row.eraId, (eraPoints.get(row.eraId) ?? 0) + row.points)
-  return [...rows.values()].map((row) => ({
-    ...row,
-    failureRate: row.failures / row.starts,
-    winRate: row.wins / row.starts,
-    pointsShare: eraPoints.get(row.eraId) ? row.points / eraPoints.get(row.eraId) : 0,
-    lostShare: row.points + row.pointsLost > 0 ? row.pointsLost / (row.points + row.pointsLost) : 0,
-  })).sort((a, b) => a.eraId.localeCompare(b.eraId) || b.starts - a.starts || a.constructorId - b.constructorId)
+  }).sort((a, b) => a.year - b.year || (a.finalPosition ?? 99) - (b.finalPosition ?? 99) || a.constructorId - b.constructorId)
 }
 
-/** Era panels for rows with at least minStarts starts, plus era-wide totals computed before filtering. */
-export function summarizeEras(rows, { minStarts = 0, metric = 'winRate' } = {}) {
+/** Era-level comparison: field-wide failure rate vs champions', and how speed and reliability track the final rank. */
+export function summarizeEras(rows) {
   return ERAS.map((era) => {
-    const all = rows.filter((row) => row.eraId === era.id)
-    const visible = all.filter((row) => row.starts >= minStarts)
-    const starts = all.reduce((sum, row) => sum + row.starts, 0)
-    const failures = all.reduce((sum, row) => sum + row.failures, 0)
+    const eraRows = rows.filter((row) => row.eraId === era.id)
+    const ranked = eraRows.filter((row) => row.finalPosition != null && row.avgGrid != null)
+    const champions = eraRows.filter((row) => row.isChampion)
+    const starts = eraRows.reduce((sum, row) => sum + row.starts, 0)
+    const failures = eraRows.reduce((sum, row) => sum + row.failures, 0)
+    const championStarts = champions.reduce((sum, row) => sum + row.starts, 0)
     return {
       era,
-      rows: visible,
-      hidden: all.length - visible.length,
       starts,
       failures,
-      failureRate: starts ? failures / starts : 0,
-      correlation: pearson(visible.map((row) => [row.failureRate, row[metric]])),
+      fieldFailureRate: starts ? failures / starts : 0,
+      championFailureRate: championStarts ? champions.reduce((sum, row) => sum + row.failures, 0) / championStarts : null,
+      speedCorrelation: pearson(ranked.map((row) => [row.avgGrid, row.finalPosition])),
+      reliabilityCorrelation: pearson(ranked.map((row) => [row.failureRate, row.finalPosition])),
     }
   })
+}
+
+/** Quadrant thresholds for the visible rows: median average grid, and the starts-weighted failure rate. */
+export function quadrantSplits(rows) {
+  const grids = rows.map((row) => row.avgGrid).filter((value) => value != null).sort((a, b) => a - b)
+  if (!grids.length) return null
+  const middle = Math.floor(grids.length / 2)
+  const starts = rows.reduce((sum, row) => sum + row.starts, 0)
+  return {
+    grid: grids.length % 2 ? grids[middle] : (grids[middle - 1] + grids[middle]) / 2,
+    failureRate: starts ? rows.reduce((sum, row) => sum + row.failures, 0) / starts : 0,
+  }
+}
+
+export function getQuadrant(row, splits) {
+  if (!splits || row.avgGrid == null) return null
+  const fast = row.avgGrid <= splits.grid
+  const fragile = row.failureRate > splits.failureRate
+  if (fast) return fragile ? 'fastFragile' : 'fastReliable'
+  return fragile ? 'slowFragile' : 'slowReliable'
+}
+
+/**
+ * Race-by-race cumulative points for one constructor-season against its rival
+ * (the champion, or the runner-up when the selected team is champion), plus a
+ * "without engine failures" line that adds each failure's estimated points.
+ * Points are race results only, so totals can differ slightly from standings.
+ */
+export function buildSeasonTimeline(tables, rows, constructorId, year) {
+  const row = rows.find((item) => item.constructorId === constructorId && item.year === year)
+  if (!row) return null
+  const rival = rows.find((item) => item.year === year && item.constructorId !== constructorId
+    && item.finalPosition === (row.isChampion ? 2 : 1)) ?? null
+
+  const rounds = new Map()
+  for (const race of tables.races.values()) {
+    if (race.year === year) rounds.set(race.raceId, { raceId: race.raceId, round: race.round, raceName: race.name, team: 0, rival: 0, failures: [], hasResults: false })
+  }
+  for (const result of tables.results.values()) {
+    const round = rounds.get(result.raceId)
+    if (!round) continue
+    round.hasResults = true
+    if (result.constructorId === constructorId) {
+      round.team += result.points ?? 0
+      if (classify(tables, result).isEngineFailure) {
+        round.failures.push({
+          resultId: result.resultId,
+          driver: tables.drivers.get(result.driverId)?.name ?? `Driver ${result.driverId}`,
+          status: tables.statuses.get(result.statusId)?.status ?? null,
+          laps: result.laps,
+        })
+      }
+    } else if (rival && result.constructorId === rival.constructorId) {
+      round.rival += result.points ?? 0
+    }
+  }
+
+  let team = 0
+  let rivalTotal = 0
+  let whatIf = 0
+  const timeline = [...rounds.values()].filter((round) => round.hasResults)
+    .sort((a, b) => a.round - b.round)
+    .map((round) => {
+      const lost = round.failures.length * row.pointsPerFinish
+      team += round.team
+      rivalTotal += round.rival
+      whatIf += round.team + lost
+      return { raceId: round.raceId, round: round.round, raceName: round.raceName, team: round.team, rival: round.rival, failures: round.failures, lost, cumulativeTeam: team, cumulativeRival: rivalTotal, cumulativeWhatIf: whatIf }
+    })
+
+  const gap = rivalTotal - team
+  return {
+    row,
+    rival,
+    rounds: timeline,
+    teamPoints: team,
+    rivalPoints: rivalTotal,
+    whatIfPoints: whatIf,
+    gap,
+    // Only meaningful when the team was not champion: would the estimated lost points close the gap?
+    failuresExplainGap: rival != null && !row.isChampion && row.pointsLost > gap,
+  }
+}
+
+/** A strong default example: the non-champion whose estimated engine losses most exceed its gap to the champion. */
+export function pickDefaultSeason(tables, rows) {
+  const candidates = rows.filter((row) => row.finalPosition === 2 && row.failures > 0)
+  let best = null
+  let bestMargin = -Infinity
+  for (const row of candidates) {
+    const timeline = buildSeasonTimeline(tables, rows, row.constructorId, row.year)
+    const margin = row.pointsLost - (timeline?.gap ?? Infinity)
+    if (margin > bestMargin) {
+      bestMargin = margin
+      best = row
+    }
+  }
+  return best ?? rows.find((row) => row.isChampion) ?? rows[0] ?? null
 }
