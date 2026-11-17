@@ -4,14 +4,24 @@ import SectionNav from './components/SectionNav.jsx'
 import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
+const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
 
 function App() {
-  const [showDashboard, setShowDashboard] = useState(false)
+  const [section, setSection] = useState(null)
+  const home = () => setSection(null)
 
-  if (showDashboard) {
+  if (section === 'drivers') {
     return (
       <Suspense fallback={<main className="page-status" role="status">Opening the driver explorer…</main>}>
-        <Dashboard onBack={() => setShowDashboard(false)} />
+        <Dashboard onBack={home} onCircuits={() => setSection('circuits')} />
+      </Suspense>
+    )
+  }
+
+  if (section === 'circuits') {
+    return (
+      <Suspense fallback={<main className="page-status" role="status">Opening the circuit explorer…</main>}>
+        <CircuitExplorer onHome={home} onDrivers={() => setSection('drivers')} />
       </Suspense>
     )
   }
@@ -25,7 +35,7 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav onDrivers={() => setShowDashboard(true)} />
+        <SectionNav onDrivers={() => setSection('drivers')} onCircuits={() => setSection('circuits')} />
       </div>
 
       <section className="landing__hero">

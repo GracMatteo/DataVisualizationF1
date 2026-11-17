@@ -10,7 +10,7 @@ import { buildDriverTree } from './lib/buildDriverTree.js'
 import { getTeamColor } from './lib/teamColors.js'
 import './Dashboard.css'
 
-export default function Dashboard({ onBack }) {
+export default function Dashboard({ onBack, onCircuits }) {
   const [tables, setTables] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -54,7 +54,7 @@ export default function Dashboard({ onBack }) {
         <span className="dashboard-header__tag">THE DRIVER ARCHIVE</span>
         <button type="button" className="text-button" onClick={onBack}>← Back home</button>
       </header>
-      <SectionNav activeSection="drivers" />
+      <SectionNav activeSection="drivers" onCircuits={onCircuits} />
 
       <section className="dashboard-intro" aria-labelledby="explorer-title">
         <p className="eyebrow">One driver. Every chapter.</p>
