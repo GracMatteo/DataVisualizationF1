@@ -8,14 +8,14 @@ const RESULT_NUMBERS = [
 ];
 let dataPromise;
 
-function cleanValue(value) {
+export function cleanValue(value) {
   if (value == null) return null;
   if (typeof value !== 'string') return value;
   const text = value.trim();
   return text === '' || text === '\\N' ? null : text;
 }
 
-function numberOrNull(value) {
+export function numberOrNull(value) {
   const cleaned = cleanValue(value);
   if (cleaned === null) return null;
   const number = Number(cleaned);

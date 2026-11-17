@@ -4,9 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/prepare-data.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/prepare-data.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "test": "node --test",

@@ -1,0 +1,180 @@
+/* Circuit page: builds on the shared header, filter, panel and note styles in Dashboard.css. */
+
+.circuit-filters .season-filters { flex: 2 1 420px; }
+.circuit-filters__country, .circuit-filters__team { flex: 1 1 200px; }
+.play-button {
+  height: 44px;
+  flex-shrink: 0;
+  padding-inline: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.play-button:hover, .play-button[aria-pressed="true"] { border-color: var(--accent-border); background: var(--accent-bg); }
+
+.circuit-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 1.5rem; align-items: start; }
+
+.map-key { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.1rem; margin: 0; padding: 0; font-size: 0.7rem; }
+.map-key li { display: flex; align-items: center; gap: 0.45rem; }
+.map-key__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.map-key__dot--neutral { background: var(--text); opacity: 0.5; }
+.map-key__dot--hollow { border: 1.5px solid var(--text); }
+.map-key__dot--others { background: var(--text); opacity: 0.35; }
+
+.display-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; gap: 2px; }
+.display-toggle button {
+  min-height: 36px;
+  padding: 0.3rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.display-toggle button[aria-pressed="true"] { background: var(--text-h); color: var(--bg); }
+.display-toggle button:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--accent-bg); }
+.chart-panel__tools { display: grid; justify-items: end; gap: 0.6rem; }
+.display-toggle__note { font-size: 0.68rem; }
+.map-key__sizes { display: inline-flex; align-items: center; gap: 2px; }
+.map-key__sizes span { border: 1px solid var(--text); border-radius: 50%; width: 6px; height: 6px; }
+.map-key__sizes span + span { width: 12px; height: 12px; }
+
+.circuit-map { position: relative; overflow: hidden; background: var(--surface); }
+.circuit-map__svg { display: block; cursor: grab; touch-action: none; }
+.circuit-map__svg:active { cursor: grabbing; }
+.circuit-map__land { fill: var(--bg); stroke: var(--border); }
+
+.circuit-marker { outline: none; }
+.circuit-marker[role="button"] { cursor: pointer; }
+.circuit-marker__hit { fill: transparent; }
+.circuit-marker__dot { fill: var(--text); stroke: var(--bg); stroke-width: 1; fill-opacity: 0.9; }
+.circuit-marker--neutral .circuit-marker__dot { fill-opacity: 0.45; }
+.circuit-marker--no-wins .circuit-marker__dot { fill: none; stroke: var(--text); stroke-width: 1.2; stroke-opacity: 0.7; }
+.circuit-marker--inactive .circuit-marker__dot { fill-opacity: 0.2; stroke: none; }
+.circuit-marker__pie path { stroke: var(--bg); stroke-width: 0.75; }
+.circuit-marker__pie .circuit-marker__others { fill: var(--text); fill-opacity: 0.35; }
+.circuit-marker__focus { fill: none; stroke: transparent; stroke-width: 2; }
+.circuit-marker:hover .circuit-marker__focus,
+.circuit-marker:focus-visible .circuit-marker__focus,
+.circuit-marker.is-selected .circuit-marker__focus { stroke: var(--accent); }
+
+.circuit-map__tooltip {
+  position: absolute;
+  z-index: 2;
+  width: 240px;
+  padding: 0.75rem 0.85rem;
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: 0 6px 24px #00000014;
+  pointer-events: none;
+  font-size: 0.75rem;
+}
+.circuit-map__tooltip strong { color: var(--text-h); }
+.circuit-map__tooltip small { margin-bottom: 0.2rem; }
+
+.circuit-map__controls { position: absolute; top: 0.75rem; right: 0.75rem; display: flex; gap: 0.35rem; }
+.circuit-map__controls button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.circuit-map__controls button:hover { border-color: var(--accent-border); background: var(--accent-bg); }
+
+.circuit-panel { border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; display: grid; gap: 0.9rem; }
+.circuit-panel h2 { font-size: 1.15rem; letter-spacing: -0.025em; }
+.circuit-panel h3 { font-size: 0.8rem; margin-top: 0.4rem; }
+.circuit-panel .eyebrow { margin-bottom: 0.3rem; }
+.circuit-panel__head { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.circuit-panel__head .text-button { flex-shrink: 0; min-height: 44px; }
+.circuit-panel__place, .circuit-panel__lead { font-size: 0.8rem; margin-top: 0.3rem; }
+.circuit-panel__note { font-size: 0.7rem; line-height: 1.6; }
+.circuit-panel__empty { font-size: 0.85rem; color: var(--text-h); }
+
+.circuit-facts { display: flex; flex-wrap: wrap; gap: 1.25rem; margin: 0; }
+.circuit-facts > div { display: flex; flex-direction: column-reverse; gap: 0.15rem; }
+.circuit-facts dt { font-size: 0.68rem; }
+.circuit-facts dd { margin: 0; color: var(--text-h); font: 500 1.2rem/1.2 var(--mono); letter-spacing: -0.04em; }
+
+.bar-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+.bar-row {
+  width: 100%;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 8rem) minmax(3rem, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+.bar-row:hover { background: var(--accent-bg); }
+.bar-row[aria-pressed="true"] { border-color: var(--accent-border); background: var(--accent-bg); }
+.bar-row__name { display: flex; align-items: center; gap: 0.45rem; color: var(--text-h); min-width: 0; }
+.bar-row__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row__track { height: 8px; border-radius: 4px; background: var(--surface); overflow: hidden; }
+.bar-row__fill { display: block; height: 100%; border-radius: 4px; }
+.bar-row__value { font: 0.75rem var(--mono); color: var(--text-h); text-align: right; white-space: nowrap; }
+.bar-row__value small { color: var(--text); font-size: 0.68rem; }
+
+.season-history { display: grid; gap: 0.6rem; }
+.season-history__summary { font-size: 0.75rem; }
+.season-history__summary strong { color: var(--text-h); font-family: var(--mono); }
+.season-grid { display: grid; gap: 3px; }
+.season-grid__row { display: grid; grid-template-columns: 3rem repeat(10, minmax(0, 1fr)); gap: 3px; }
+.season-grid__row--head span { font: 0.6rem var(--mono); text-align: center; color: var(--text); }
+.season-grid__decade { font: 0.65rem var(--mono); color: var(--text-h); align-self: center; }
+.season-cell { display: flex; flex-direction: column; gap: 1px; height: 22px; padding: 0; border: 0; border-radius: 3px; overflow: hidden; background: none; }
+button.season-cell { cursor: default; }
+.season-cell__race { flex: 1; }
+.season-cell--unused { background: var(--border); }
+.season-cell--no-winner { background: repeating-linear-gradient(45deg, var(--border) 0 3px, transparent 3px 6px); border: 1px solid var(--border); }
+.season-cell--outside { visibility: hidden; }
+.season-cell.is-active, .season-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.season-history__readout { min-height: 2.6em; font-size: 0.75rem; color: var(--text-h); line-height: 1.4; }
+.season-history__key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.68rem; }
+.season-history__key li { display: flex; align-items: center; gap: 0.4rem; }
+.season-history__key .season-cell { width: 12px; height: 14px; flex-shrink: 0; }
+.season-cell--sample { background: conic-gradient(#e80020 0 120deg, #ff8000 120deg 240deg, #27f4d2 240deg); }
+.season-cell--split span { flex: 1; background: var(--text); opacity: 0.55; }
+
+.reading-guide--first { border-left: 0; padding-left: 0; }
+.explorer-notes .reading-guide p + p { margin-top: 0.75rem; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .circuit-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .season-filters { flex-wrap: wrap; }
+  .season-filters .field { flex: 1 1 120px; }
+  .reading-guide--first { border-top: 0; padding-top: 0; }
+  .circuit-panel { padding: 1rem; }
+  .map-key { gap: 0.4rem 0.8rem; }
+}
