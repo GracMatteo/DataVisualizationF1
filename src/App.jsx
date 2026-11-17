@@ -4,14 +4,21 @@ import SectionNav from './components/SectionNav.jsx'
 import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
+const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
 
 function App() {
-  const [showDashboard, setShowDashboard] = useState(false)
+  const [section, setSection] = useState(null)
+  const navigation = {
+    onBack: () => setSection(null),
+    onDrivers: () => setSection('drivers'),
+    onConstructors: () => setSection('constructors'),
+  }
 
-  if (showDashboard) {
+  if (section) {
+    const Page = section === 'drivers' ? Dashboard : ConstructorDashboard
     return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the driver explorer…</main>}>
-        <Dashboard onBack={() => setShowDashboard(false)} />
+      <Suspense fallback={<main className="page-status" role="status">Opening the {section === 'drivers' ? 'driver' : 'constructor'} explorer…</main>}>
+        <Page {...navigation} />
       </Suspense>
     )
   }
@@ -25,14 +32,14 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav onDrivers={() => setShowDashboard(true)} />
+        <SectionNav onDrivers={navigation.onDrivers} onConstructors={navigation.onConstructors} />
       </div>
 
       <section className="landing__hero">
         <p className="landing__eyebrow">Formula 1 Data Visualization</p>
         <h1>See every race as data.</h1>
         <p className="landing__subtitle">
-          Follow a driver’s career, explore their constructors, and uncover the result behind every race.
+          Follow a driver’s career, measure what engine failures cost each constructor, and uncover the result behind every race.
         </p>
 
         <div className="landing__actions">

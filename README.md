@@ -24,7 +24,7 @@ npm install
 npm run dev
 ```
 
-Use the **Drivers** capsule below the top bar to open the explorer. Constructors,
+Use the **Drivers** or **Constructors** capsule below the top bar to open an explorer.
 Races and Circuits are placeholders for future visualizations.
 
 ## Driver career tree
@@ -32,6 +32,12 @@ Races and Circuits are placeholders for future visualizations.
 See [DriverViz.md — data transformation pipeline and visual encodings](DriverViz.md)
 for the CSV joins, filtering, hierarchy construction, point-size scale, color rules,
 labels and interpretation limits.
+
+## Constructor engine reliability
+
+See [ConstructorViz.md — question, data pipeline and visual encodings](ConstructorViz.md)
+for the engine-failure classification, the three engine eras, the points-lost estimate,
+the linked scatter/bar views and their interpretation limits.
 
 ## Validation
 
