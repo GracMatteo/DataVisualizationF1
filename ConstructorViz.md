@@ -159,7 +159,7 @@ compared between eras. Only the visible dots and the quadrant lines change.
 | Channel | Encodes |
 |---|---|
 | Row | A constructor, sorted by total wins in 2000–2025, then by starts |
-| Column | A season, grouped by era with a 10 px gap between eras |
+| Column | A season, labelled with its full year (rotated when columns are narrower than 40 px), grouped by era with a 10 px gap. A bracket above each group names the era and its seasons, such as “V10 · 2000–2005”. |
 | Cell fill | Number of engine failures. Color is `#d54c59` (the shared "retired" color); opacity is linear from 0.22 (1 failure) to 1 (the archive maximum); 0 failures shows only the neutral surface. |
 | Number in cell | The exact failure count (blank when 0) |
 | Gold outline | Constructors' champion that season |

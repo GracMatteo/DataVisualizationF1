@@ -61,7 +61,10 @@
 .heatmap__scroll { overflow-x: auto; }
 .heatmap__scroll > svg { display: block; }
 .heatmap-eras text { font: 600 10px var(--sans); fill: var(--text); letter-spacing: 0.1em; text-transform: uppercase; }
-.heatmap-eras text.is-active { fill: var(--accent); }
+.heatmap-eras line { stroke: var(--text); stroke-width: 1.5; }
+.heatmap-eras .is-active text { fill: var(--accent); }
+.heatmap-eras .is-active line { stroke: var(--accent); }
+.heatmap-axis-title { font: 10px var(--mono); fill: var(--text); }
 .heatmap-years text { font: 9px var(--mono); fill: var(--text); }
 .heatmap-name { font: 12px var(--sans); fill: var(--text-h); }
 .heatmap-row { transition: opacity 0.15s ease; }

@@ -6,7 +6,8 @@ import { CHAMPION_COLOR, FAILURE_COLOR } from '../lib/reliabilityPresentation.js
 const LABEL_WIDTH = 128
 const ERA_GAP = 10
 const ROW_HEIGHT = 26
-const HEADER = 40
+// Room for the era brackets and full, rotated season labels.
+const HEADER = 78
 const MIN_CELL = 22
 
 /** Constructor × season grid; each cell counts engine failures and the champion gets a gold outline. */
@@ -39,15 +40,26 @@ export default function FailureHeatmap({ rows, constructors, eraId, highlightedI
       return LABEL_WIDTH + eraIndex * ERA_GAP + years.indexOf(year) * cell
     }
 
-    scene.append('g').attr('class', 'heatmap-eras').attr('aria-hidden', true)
-      .selectAll('text').data(ERAS).join('text')
-      .attr('x', (era) => columnX(era.fromYear)).attr('y', 12)
+    const eras = scene.append('g').attr('class', 'heatmap-eras').attr('aria-hidden', true)
+      .selectAll('g').data(ERAS).join('g')
       .classed('is-active', (era) => era.id === eraId)
-      .text((era) => era.label)
+    eras.append('text')
+      .attr('x', (era) => columnX(era.fromYear) + 1).attr('y', 12)
+      .text((era) => `${era.label} · ${era.fromYear}–${era.toYear}`)
+    eras.append('line')
+      .attr('x1', (era) => columnX(era.fromYear) + 1).attr('x2', (era) => columnX(era.toYear) + cell - 1)
+      .attr('y1', 20).attr('y2', 20)
+    scene.append('text').attr('class', 'heatmap-axis-title').attr('aria-hidden', true)
+      .attr('x', LABEL_WIDTH - 10).attr('y', HEADER - 8).attr('text-anchor', 'end')
+      .text('Season →')
+    // Full four-digit years; rotated when a column is too narrow to fit them flat.
+    const rotate = cell < 40
     scene.append('g').attr('class', 'heatmap-years').attr('aria-hidden', true)
       .selectAll('text').data(years).join('text')
-      .attr('x', (year) => columnX(year) + cell / 2).attr('y', HEADER - 8).attr('text-anchor', 'middle')
-      .text((year) => cell >= 30 || year % 5 === 0 ? String(year).slice(2) : '')
+      .attr('transform', (year) => `translate(${columnX(year) + cell / 2},${HEADER - 8})${rotate ? ' rotate(-55)' : ''}`)
+      .attr('text-anchor', rotate ? 'start' : 'middle')
+      .attr('dy', rotate ? '0.35em' : 0)
+      .text((year) => year)
 
     const rowGroups = scene.append('g').selectAll('g')
       .data(constructors, (constructor) => constructor.constructorId)
