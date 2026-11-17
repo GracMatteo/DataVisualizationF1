@@ -1,4 +1,5 @@
 import { classifyRaceResult } from './raceResults.js';
+import { getRaceGroupKey, RESULT_GROUPS } from './raceResultGroups.js';
 
 function compareRaces(a, b) {
   return (a.race.year ?? Infinity) - (b.race.year ?? Infinity)
@@ -47,14 +48,16 @@ function raceNode({ result, race }, seasonId, constructorRef, tables) {
 }
 
 /**
- * Build a plain driver -> constructor -> season -> race tree for d3.hierarchy.
+ * Build a plain driver -> constructor -> season -> resultGroup -> race tree for d3.hierarchy.
  * Bounds are inclusive years (numbers or numeric strings). Unknown/unavailable
  * drivers return null; a known driver with no results in range gets an empty
  * root and zero summary. Reversed bounds also produce an empty tree.
  *
  * Constructor groups are ordered by their first race in the selected range;
- * seasons ascend by year, races by round (then date/IDs for stable ties).
- * IDs do not depend on labels, input order, or the selected range.
+ * Seasons ascend by year, nonempty result groups follow RESULT_GROUPS order,
+ * and races within each group sort by round (then date/IDs for stable ties).
+ * IDs do not depend on labels, input order, or the selected range; race IDs
+ * retain their season prefix without a result-group segment.
  * Every non-leaf summary contains numeric counts for entries, wins, podiums,
  * points, seasons and constructors. Entries include DNS/DNQ; missing points
  * contribute zero and wins/podiums use actual classified position only.
@@ -109,6 +112,31 @@ export function buildDriverTree(driverId, tables, { fromYear, toYear } = {}) {
     for (const [year, seasonEntries] of bySeason) {
       const seasonId = `${id}/season:${year ?? 'unknown'}`;
       const label = year === null ? 'Unknown season' : String(year);
+      const byResultGroup = new Map();
+      for (const entry of seasonEntries) {
+        const leaf = raceNode(entry, seasonId, constructorRef, tables);
+        const key = getRaceGroupKey(leaf);
+        if (!byResultGroup.has(key)) byResultGroup.set(key, { entries: [], children: [] });
+        const group = byResultGroup.get(key);
+        group.entries.push(entry);
+        group.children.push(leaf);
+      }
+      const resultGroups = RESULT_GROUPS
+        .filter(({ key }) => byResultGroup.has(key))
+        .map(({ key, label: groupLabel }) => {
+          const group = byResultGroup.get(key);
+          return {
+            id: `${seasonId}/group:${key}`,
+            type: 'resultGroup',
+            name: groupLabel,
+            groupKey: key,
+            year,
+            constructorId,
+            constructorRef,
+            summary: summarize(group.entries),
+            children: group.children,
+          };
+        });
       node.children.push({
         id: seasonId,
         type: 'season',
@@ -118,7 +146,7 @@ export function buildDriverTree(driverId, tables, { fromYear, toYear } = {}) {
         constructorId,
         constructorRef,
         summary: summarize(seasonEntries),
-        children: seasonEntries.map((entry) => raceNode(entry, seasonId, constructorRef, tables)),
+        children: resultGroups,
       });
     }
     root.children.push(node);

@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { hierarchy, linkHorizontal, select, tree, zoom, zoomIdentity, zoomTransform } from 'd3'
 import { getTeamColor } from '../lib/teamColors.js'
 import { createTreeNodeRadius } from '../lib/treeNodeRadius.js'
-import { getRaceColor, getRaceDescription } from '../lib/racePresentation.js'
+import { getRaceColor, getRaceDescription, POSITION_COLORS } from '../lib/racePresentation.js'
 
 const shorten = (text, limit) => text.length > limit ? `${text.slice(0, limit - 1)}…` : text
 
@@ -37,7 +37,7 @@ export default function DriverTree({ data, onSelectRace }) {
     let selectedRaceId = null
 
     root.descendants().forEach((node) => {
-      if (node.depth === 2) {
+      if (node.data.type === 'season' || node.data.type === 'resultGroup') {
         node._children = node.children
         node.children = null
       }
@@ -55,7 +55,7 @@ export default function DriverTree({ data, onSelectRace }) {
     function fit(animate = true) {
       const nodes = root.descendants()
       const left = Math.min(...nodes.map((node) => node.y - nodeRadius(node.data) - 8))
-      const right = Math.max(...nodes.map((node) => node.y + (node.depth === 3 ? 340 : 230)))
+      const right = Math.max(...nodes.map((node) => node.y + (node.data.type === 'race' ? 340 : 230)))
       const top = Math.min(...nodes.map((node) => node.x)) - 30
       const bottom = Math.max(...nodes.map((node) => node.x)) + 30
       const scale = Math.max(0.02, Math.min(1, (width - 64) / (right - left), (height - 72) / (bottom - top)))
@@ -152,6 +152,7 @@ export default function DriverTree({ data, onSelectRace }) {
         )
 
       node.classed('is-race', (item) => item.data.type === 'race')
+        .classed('is-result-group', (item) => item.data.type === 'resultGroup')
         .classed('is-selected', (item) => item.data.id === selectedRaceId)
         .attr('aria-expanded', (item) => item.data.type === 'race' ? null : Boolean(item.children))
         .attr('aria-label', (item) => item.data.type === 'race'
@@ -159,7 +160,11 @@ export default function DriverTree({ data, onSelectRace }) {
           : `${item.data.name}, ${item.data.summary.entries} race entries, ${item.data.summary.points.toLocaleString()} points. ${item.children ? 'Collapse' : 'Expand'} branch.`)
       node.select('.node-dot')
         .attr('r', (item) => nodeRadius(item.data))
-        .attr('fill', (item) => item.data.type === 'race' ? getRaceColor(item.data) : item.depth === 0 ? 'var(--text-h)' : getTeamColor(item.data.constructorRef))
+        .attr('fill', (item) => {
+          if (item.data.type === 'race') return getRaceColor(item.data)
+          if (item.data.type === 'resultGroup') return POSITION_COLORS[item.data.groupKey]
+          return item.depth === 0 ? 'var(--text-h)' : getTeamColor(item.data.constructorRef)
+        })
       node.select('.node-focus-ring').attr('r', (item) => nodeRadius(item.data) + 4)
       node.selectAll('.node-label, .node-caption').attr('x', (item) => nodeRadius(item.data) + 10)
       node.select('.node-toggle').text((item) => item._children ? '+' : '')
@@ -237,7 +242,7 @@ export default function DriverTree({ data, onSelectRace }) {
       <div className="tree-canvas" ref={containerRef}>
         <svg ref={svgRef} role="group" aria-labelledby={titleId} aria-describedby={descriptionId}>
           <title id={titleId}>{data.name} career tidy tree</title>
-          <desc id={descriptionId}>Driver, constructors, seasons, then race results. Constructor and season dots grow with this driver’s total race points in each branch, using a shared square-root scale with a visible minimum for zero points. Click a branch or focus it with Tab and press Enter to expand. Select a race for details. Drag to pan, scroll or pinch to zoom, or use the controls above.</desc>
+          <desc id={descriptionId}>Driver, constructors, seasons, result groups, then race results. Open a season to see its groups and open a group to reveal individual races. Constructor and season dots grow with this driver’s total race points in each branch, using a shared square-root scale with a visible minimum for zero points. Click a branch or focus it with Tab and press Enter to expand. Select a race for details. Drag to pan, scroll or pinch to zoom, or use the controls above.</desc>
         </svg>
         {tooltip && (
           <div className="tree-tooltip" role="tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
@@ -248,7 +253,7 @@ export default function DriverTree({ data, onSelectRace }) {
           </div>
         )}
       </div>
-      <p className="tree-hint">Larger constructor and season dots mean more points. Click a season to reveal races.<br />Drag to pan · Scroll or pinch to zoom · Tab + Enter to explore</p>
+      <p className="tree-hint">Larger constructor and season dots mean more points. Open a season, then a result group to reveal races.<br />Drag to pan · Scroll or pinch to zoom · Tab + Enter to explore</p>
     </div>
   )
 }

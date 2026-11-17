@@ -112,7 +112,7 @@ export default function Dashboard({ onBack, onConstructors }) {
           <section className="chart-panel" aria-labelledby="tree-heading">
             <div className="chart-panel__header">
               <div><p className="eyebrow">Career connections</p><h2 id="tree-heading">The driver tree</h2></div>
-              <ol className="hierarchy-key" aria-label="Tree levels"><li>Driver</li><li>Constructor</li><li>Season</li><li>Race</li></ol>
+              <ol className="hierarchy-key" aria-label="Tree levels"><li>Driver</li><li>Constructor</li><li>Season</li><li>Result group</li><li>Race</li></ol>
             </div>
             {!driverTree.children.length ? (
               <div className="empty-state" role="status">
@@ -129,7 +129,8 @@ export default function Dashboard({ onBack, onConstructors }) {
             <aside className="reading-guide" aria-labelledby="reading-guide-title">
               <p className="eyebrow">A quick guide</p>
               <h2 id="reading-guide-title">How to read the tree</h2>
-              <p>Branches follow each constructor’s first appearance in the selected seasons. Open a season to see its races in round order. Constructor and season dots grow with this driver’s race points in that branch, using the same square-root scale for the selected career range. Zero-point branches keep a minimum size.</p>
+              <p>Branches follow each constructor’s first appearance in the selected seasons. Open a season to see P1, P2, P3, Points, No points, DNF and Other outcomes groups, then open a group to see its races in round order. Only nonempty groups appear. Points means a finished points-scoring result outside the podium; DNS and disqualifications stay under Other outcomes.</p>
+              <p>Constructor and season dots grow with this driver’s race points in that branch, using the same square-root scale for the selected career range. Zero-point branches keep a minimum size; result-group dots have a fixed size.</p>
               <ul className="constructor-key" aria-label="Constructor colors">
                 {driverTree.children.map((constructor) => <li key={constructor.id}><span className="legend-dot" style={{ backgroundColor: getTeamColor(constructor.constructorRef) }} />{constructor.name}</li>)}
               </ul>

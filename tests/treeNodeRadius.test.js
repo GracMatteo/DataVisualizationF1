@@ -31,6 +31,14 @@ test('driver and race dots keep their original sizes and do not influence the po
   for (const position of [4, 10, null]) assert.equal(radius({ type: 'race', position }), 5)
 })
 
+test('result groups keep a fixed radius and do not change the constructor/season points scale', () => {
+  const season = branch('season', 100)
+  const group = branch('resultGroup', 10000)
+  const radius = createTreeNodeRadius([season, group])
+  assert.equal(radius(group), 8)
+  assert.equal(radius(season), 24)
+})
+
 test('the full hierarchy keeps season sizes stable when constructor children are collapsed', () => {
   const season = branch('season', 100)
   const constructor = { ...branch('constructor', 400), children: [season] }

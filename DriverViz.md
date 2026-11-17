@@ -5,7 +5,7 @@
 A horizontal tidy tree answers: **which constructors did a driver race for, in which
 seasons, and with what results?** Its hierarchy is:
 
-**Driver → Constructor → Season → Race result**
+**Driver → Constructor → Season → Result group → Race result**
 
 Each leaf represents one driver's result row, not an entire race. Constructor branches
 contain only the selected driver's results.
@@ -31,10 +31,14 @@ Five local CSVs from [`public/data/`](public/data/) supply the data:
 4. **Group:** [`buildDriverTree.js`](src/lib/buildDriverTree.js) sorts by year/round, groups
    by constructor then season, and orders constructors by their first filtered race.
    Mid-season switches create separate constructor branches; later returns reuse a branch.
+   Within each season, [`raceResultGroups.js`](src/lib/raceResultGroups.js) partitions races
+   into P1, P2, P3, Points, No points, DNF and Other outcomes, omitting empty groups.
+   These groups have a fixed order; races stay chronological within each group.
 5. **Summarize:** entries count result rows; wins/podiums count classified P1/P1–P3;
    points are summed with missing values contributing zero; seasons/constructors count distinct IDs/years.
 6. **Render:** [`DriverTree.jsx`](src/components/DriverTree.jsx) uses `d3.hierarchy`,
-   `d3.tree` and `d3.linkHorizontal` to draw SVG nodes and links. Seasons start collapsed.
+   `d3.tree` and `d3.linkHorizontal` to draw SVG nodes and links. Seasons and result groups
+   start collapsed: open a season to reveal groups, then open a group to reveal races.
 
 ```mermaid
 flowchart TD
@@ -45,9 +49,10 @@ flowchart TD
     E --> F[Sort results chronologically]
     F --> G[Group by constructor then season]
     G --> H[Classify outcomes and compute summaries]
-    H --> I[Create hierarchy with d3.hierarchy]
+    H --> O[Group races by result category]
+    O --> I[Create hierarchy with d3.hierarchy]
     I --> J[Compute point-based node sizes]
-    J --> K[Collapse seasons initially]
+    J --> K[Collapse seasons and result groups initially]
     K --> L[Position visible nodes with d3.tree]
     L --> M[Render SVG circles, links and labels]
     M --> N[Explore the tree]
@@ -62,6 +67,7 @@ flowchart TD
 | Driver circle | Selected driver | Radius 8; theme foreground color |
 | Constructor circle | Driver's results with that team | Radius 10–24, scaled by branch points; team color |
 | Season circle | Driver's season with that team | Same points scale and team color |
+| Result-group circle | Races in one season with the same result category | Fixed radius 8; matching result color |
 | Race circle | Individual result | Radius 7 for classified P1–P3, otherwise 5; result color below |
 | Curved link | Parent-child membership | Uniform width 1.5; theme border color |
 | `+` inside a circle | Collapsed children | Interaction indicator, not data |
@@ -88,17 +94,20 @@ Constructor/season colors identify teams, not performance. Examples: Ferrari red
 [`teamColors.js`](src/lib/teamColors.js); other references hash into D3's `schemeTableau10`,
 and missing references use `#8b949e`. Colors may repeat, so names remain essential.
 
-Race colors follow these rules **in priority order**:
+Result groups and their races share these rules **in priority order**:
 
-| Condition | Color |
-|---|---|
-| Retired, even with a classified position | Red `#d54c59` |
-| Other non-finished/unknown outcome: DSQ, DNS, DNQ, EXC, NC | Purple `#9a64bc` |
-| Finished P1 | Gold `#bb8b20` |
-| Finished P2 | Silver-gray `#8b96a5` |
-| Finished P3 | Bronze `#b77748` |
-| Other finished result with positive points | Teal `#23877d` |
-| Other finished result with zero/missing points | Gray `#95929e` |
+| Group | Condition | Color |
+|---|---|---|
+| DNF | Retired, even with a classified position | Red `#d54c59` |
+| Other outcomes | Other non-finished/unknown outcome: DSQ, DNS, DNQ, EXC, NC | Purple `#9a64bc` |
+| P1 | Finished P1 | Gold `#bb8b20` |
+| P2 | Finished P2 | Silver-gray `#8b96a5` |
+| P3 | Finished P3 | Bronze `#b77748` |
+| Points | Other finished result with positive points | Teal `#23877d` |
+| No points | Other finished result with zero/missing points | Gray `#95929e` |
+
+A race belongs to exactly one group. Podiums are not repeated under Points; DNS/DSQ
+are not labeled DNF. Group captions show their race-entry count and point total.
 
 [`raceResults.js`](src/lib/raceResults.js) separates official position from outcome:
 `P7` with an Engine retirement stays labeled `P7` but is red. `Finished` and `+N Lap(s)`
@@ -109,7 +118,7 @@ is never substituted for classified position. Colors come from
 ## Labels and interactions
 
 - **Overview:** driver name/nationality, entries, seasons, constructors, wins, podiums and points.
-- **Branch captions:** entries and points. **Race labels:** name/result; captions add round, grid and points.
+- **Branch/group captions:** entries and points. **Race labels:** name/result; captions add round, grid and points.
 - **Hover/focus:** full race information. **Select a race:** persistent driver/team, date,
   season/round, grid, classified position, points and official status. Missing values are
   explicit; a zero/missing grid displays “Not recorded / pit lane,” not a confirmed pit-lane start.
@@ -125,5 +134,6 @@ is never substituted for classified position. Colors come from
 - Footer coverage is archive-wide and based on joined results, not scheduled races.
 - Labels/details supplement color; theme foreground, border and accent colors are UI styling.
 
-[`tests/`](tests/) cover normalization, grouping, filtering, result classification, colors
+[`tests/`](tests/) cover normalization, result grouping without lost/duplicate races,
+filtering, result classification, stable IDs, colors
 and sizes. Run the [README validation commands](README.md#validation).

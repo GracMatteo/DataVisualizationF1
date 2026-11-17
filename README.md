@@ -33,6 +33,11 @@ See [DriverViz.md — data transformation pipeline and visual encodings](DriverV
 for the CSV joins, filtering, hierarchy construction, point-size scale, color rules,
 labels and interpretation limits.
 
+The tree follows **Driver → Constructor → Season → Result group → Race**.
+Open a season, then a P1, P2, P3, Points or DNF group to reveal individual races.
+Non-points finishes and other outcomes (such as DNS/DSQ) have separate groups;
+only groups containing results are shown.
+
 ## Constructor speed × reliability
 
 *Fast or reliable: what makes a champion?* See
