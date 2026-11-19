@@ -4,24 +4,30 @@ import SectionNav from './components/SectionNav.jsx'
 import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
+const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
 const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
+
+const PAGES = {
+  drivers: { Page: Dashboard, label: 'driver' },
+  constructors: { Page: ConstructorDashboard, label: 'constructor' },
+  circuits: { Page: CircuitExplorer, label: 'circuit' },
+}
 
 function App() {
   const [section, setSection] = useState(null)
-  const home = () => setSection(null)
-
-  if (section === 'drivers') {
-    return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the driver explorer…</main>}>
-        <Dashboard onBack={home} onCircuits={() => setSection('circuits')} />
-      </Suspense>
-    )
+  const navigation = {
+    onBack: () => setSection(null),
+    onHome: () => setSection(null),
+    onDrivers: () => setSection('drivers'),
+    onConstructors: () => setSection('constructors'),
+    onCircuits: () => setSection('circuits'),
   }
 
-  if (section === 'circuits') {
+  if (section) {
+    const { Page, label } = PAGES[section]
     return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the circuit explorer…</main>}>
-        <CircuitExplorer onHome={home} onDrivers={() => setSection('drivers')} />
+      <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
+        <Page {...navigation} />
       </Suspense>
     )
   }
@@ -35,14 +41,18 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav onDrivers={() => setSection('drivers')} onCircuits={() => setSection('circuits')} />
+        <SectionNav
+          onDrivers={navigation.onDrivers}
+          onConstructors={navigation.onConstructors}
+          onCircuits={navigation.onCircuits}
+        />
       </div>
 
       <section className="landing__hero">
         <p className="landing__eyebrow">Formula 1 Data Visualization</p>
         <h1>See every race as data.</h1>
         <p className="landing__subtitle">
-          Follow a driver’s career, explore their constructors, and uncover the result behind every race.
+          Follow a driver’s career, measure what engine failures cost each constructor, and uncover the result behind every race.
         </p>
 
         <div className="landing__actions">

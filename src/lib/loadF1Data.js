@@ -93,13 +93,16 @@ export function indexF1Data({
   };
 }
 
+/** URL of a CSV in public/data/. Vite supplies BASE_URL; native Node has no import.meta.env. */
+export function dataUrl(file) {
+  const base = import.meta.env?.BASE_URL || '/';
+  return `${base.endsWith('/') ? base : `${base}/`}data/${file}.csv`;
+}
+
 /** Load once per module; concurrent and subsequent calls share the same Promise. */
 export function loadF1Data() {
   if (!dataPromise) {
-    // Vite supplies BASE_URL; native Node has no import.meta.env.
-    const base = import.meta.env?.BASE_URL || '/';
-    const directory = `${base.endsWith('/') ? base : `${base}/`}data/`;
-    dataPromise = Promise.all(DATA_FILES.map((file) => csv(`${directory}${file}.csv`)))
+    dataPromise = Promise.all(DATA_FILES.map((file) => csv(dataUrl(file))))
       .then((arrays) => indexF1Data(Object.fromEntries(
         DATA_FILES.map((file, index) => [file, arrays[index]]),
       )))
