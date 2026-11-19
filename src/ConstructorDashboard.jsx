@@ -20,7 +20,7 @@ import './ConstructorDashboard.css'
 const MIN_STARTS = 10
 const MAIN_TEAM_SEASONS = 5
 
-export default function ConstructorDashboard({ onBack, onDrivers, onCircuits }) {
+export default function ConstructorDashboard({ onBack, onDrivers, onConstructors, onRaces }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -97,7 +97,7 @@ export default function ConstructorDashboard({ onBack, onDrivers, onCircuits }) 
         <span className="dashboard-header__tag">THE CONSTRUCTOR ARCHIVE</span>
         <button type="button" className="text-button" onClick={onBack}>← Back home</button>
       </header>
-      <SectionNav activeSection="constructors" onDrivers={onDrivers} onCircuits={onCircuits} />
+      <SectionNav activeSection="constructors" onDrivers={onDrivers} onConstructors={onConstructors} onRaces={onRaces} />
 
       <section className="dashboard-intro" aria-labelledby="reliability-title">
         <p className="eyebrow">Speed × reliability × results · 2000–2025</p>

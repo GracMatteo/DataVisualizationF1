@@ -2,257 +2,199 @@
 
 [Back to README](README.md)
 
-A world map answers one question: **which constructor has won the most Grands Prix at
-each circuit?** One map marker is one circuit. Its color names the constructor with the
-most wins there in the selected seasons; a side panel ranks constructors overall or
-for one selected circuit.
+Two views answer: **where does a starting place stop predicting the classified finish, by circuit and by country?**
 
-The page is [`CircuitExplorer.jsx`](src/CircuitExplorer.jsx), opened with the
-**Circuits** capsule. It has no internal tabs: the map is the single view.
+The ranking compares circuits, or countries. The grid of squares shows one filtered slice in detail. One square is every classified start that shared the same grid place and the same finishing place. It is not one race, and it is not a driver.
+
+The page opens from the **Races** capsule. The page text, legends, axis captions and status labels are in French. Circuit, driver and constructor names stay as recorded. The shared section navigation stays in English, because it is also used by the driver page.
 
 ## Data pipeline
 
+Six local CSVs from [`public/data/`](public/data/) supply the data. Sprint results, qualifying
+sessions, lap times, pit stops and standings are not used.
+
 | File | Key and purpose |
 |---|---|
-| `results.csv` | `resultId`; links race and constructor; supplies the official classified `position` |
+| `results.csv` | `resultId`; `grid`, `position`, `points`, `statusId`, plus driver, constructor and race ids |
 | `races.csv` | `raceId`; season, round, name and `circuitId` |
-| `constructors.csv` | `constructorId`; name and `constructorRef` (color key) |
-| `circuits.csv` | `circuitId`; name, location, country, latitude and longitude |
-| `drivers.csv`, `status.csv` | Loaded only because the shared [`loadF1Data.js`](src/lib/loadF1Data.js) cache also serves the Drivers page; not used by this map |
+| `circuits.csv` | `circuitId`; circuit name and country, used as labels |
+| `drivers.csv` | `driverId`; the name shown when a square is opened |
+| `constructors.csv` | `constructorId`; name and the existing team color |
+| `status.csv` | `statusId`; the official finishing status, translated only for display |
 
-Not used: `sprint_results.csv`, standings, qualifying, lap times and pit stops.
-
-1. **Load and clean:** [`loadF1Data.js`](src/lib/loadF1Data.js) loads and caches results,
-   races, drivers, constructors and status, turning `\N`, blanks and invalid numbers into
-   `null`. [`loadCircuits.js`](src/lib/loadCircuits.js) loads `circuits.csv` separately with
-   the same cleaning rules; missing coordinates stay `null`.
-2. **One record per Grand Prix:** `buildRaceWinners` in
-   [`circuitWins.js`](src/lib/circuitWins.js) groups joined result rows by `raceId`.
-   A race counts as a Grand Prix only if it has at least one result (scheduled races
-   without results are excluded). Its winners are the distinct `constructorId`s of results
-   with `position === 1`. `positionOrder` is never used, so a race without a classified P1
-   keeps an empty winner list. A 1950s shared drive credited to two constructors gives
-   each one win; two P1 rows for the same constructor count once. Races are sorted by
-   season, round, then `raceId`.
-3. **Filter:** `filterRaces` keeps an inclusive From/To season range and an optional host
-   country (`circuits.country`). Empty bounds are open. A reversed range returns nothing
-   and shows a validation message.
-4. **Aggregate per circuit:** `summarizeCircuits` groups the filtered races by `circuitId`
-   and counts wins per constructor:
-
-   ```text
-   wins(circuit, constructor) = number of filtered Grands Prix at circuit won by constructor
-   ```
-
-   Standings are ordered by wins (descending), then by the race at which the constructor
-   first reached its total (earlier first), then by `constructorId`. The **leader** is the
-   single constructor with the top total; if the top total is shared, there is no leader
-   and the tied constructors are recorded instead.
-5. **Leaderboard:** `circuitLeaderboard` counts, for each constructor, the circuits it
-   leads outright (`led`), the circuits where it is tied for the lead (`shared`) and its
-   total wins over the filtered circuits. It sorts by `led`, then `shared`, then wins.
-6. **Markers:** `buildCircuitMarkers` in [`circuitMarkers.js`](src/lib/circuitMarkers.js)
-   creates one marker per circuit that has ever hosted a Grand Prix (all seasons), even
-   when the filters exclude it, so the map's geography stays stable. Its size domain comes
-   from the unfiltered summaries of the whole archive (see Scales). In pie mode,
-   `winShares` adds the slices of each active circuit.
-7. **Render:** [`CircuitMap.jsx`](src/components/CircuitMap.jsx) projects coordinates with
-   `d3.geoNaturalEarth1` (world land from `world-atlas` 110m, Antarctica removed) and
-   renders SVG markers with React. D3 handles only the projection and the zoom behavior.
-   [`CircuitPanel.jsx`](src/components/CircuitPanel.jsx) renders the rankings.
+1. **Load and clean.** [`loadF1Data.js`](src/lib/loadF1Data.js) loads the five race tables.
+   [`loadCircuitBoard.js`](src/lib/loadCircuitBoard.js) adds `circuits.csv`. `\N`, blanks and
+   invalid numbers become `null`, never zero.
+2. **Join.** [`gridFinish.js`](src/lib/gridFinish.js) keeps a result only when its race exists.
+   A missing circuit record does not drop the start: the label falls back to `Circuit {id}`
+   and the country becomes `Pays non enregistré`.
+3. **Name the country.** [`countryLabels.js`](src/lib/countryLabels.js) maps the archive country
+   to a stable key and a French label. `USA` and `United States` share the key `united-states`
+   and the label `États-Unis`. An unknown country keeps its archive text and a key prefixed
+   with `other:`. The CSV is not rewritten.
+4. **Keep classified starts with a grid.** `grid` must be greater than 0. A missing position
+   is excluded even if `positionOrder` has a number. A row missing both is counted once, as
+   "no recorded grid". [`classifyRaceResult`](src/lib/raceResults.js) still reads the English
+   status. [`statusLabels.js`](src/lib/statusLabels.js) translates it afterwards, for the table only.
+   A status that is not in that list stays in English. `+N Lap(s)` becomes `+N tour` or `+N tours`.
+5. **Derive** `placesGained = grid - position`. Positive means the driver was classified ahead
+   of the grid place. The median of an even count is the mean of the two central values.
+6. **Filter.** Circuit, first season and last season are inclusive and combine.
+   There is no country filter. A reversed season range matches nothing. Filtering does not
+   change the excluded-row rules. The excluded-row counts use the same filters.
+7. **Rank, or focus one circuit.** With no circuit chosen, the ranking uses the season range
+   only. Groups are one circuit or one country. Sort is the signed median of places gained,
+   largest gain first, then the number of classified starts, then the French label. A loss of
+   6 places sits below a gain of 6. Each row also prints the number of distinct races.
+   Choosing a circuit replaces that list with that circuit alone. The summary is still the
+   signed median and the race count. Under it, one row per exact gap counts the classified
+   starts with that gap, largest gain first. Those rows are not buttons and do not list
+   drivers. Missing gaps are omitted. The season range still
+   applies, so “every race” means every race of this circuit inside the chosen seasons.
+   Clearing the circuit restores the comparison. Par pays is available only in that comparison.
+8. **Bin the filtered slice.** The remaining starts are grouped by the exact pair `(grid, position)`.
+   The axis maximum is the largest grid or finish still present, so a filter rebuilds the axes.
 
 ```mermaid
 flowchart TD
-    A[results, races, constructors CSVs] --> B[loadF1Data: clean and index]
-    C[circuits CSV] --> D[loadCircuits: clean and index]
-    B --> E[One record per Grand Prix with classified P1 constructors]
-    E --> F[Filter: season range and host country]
-    F --> G[Count wins per circuit and constructor]
-    G --> H[Leader or tie per circuit]
-    H --> I[Leaderboard of circuits led]
-    H --> J[Map markers: color, size, state]
-    D --> J
-    J --> K[Projected SVG map]
-    I --> L[Side panel]
+  results[results.csv] --> join[Join race, driver, constructor, status, circuit]
+  races[races.csv] --> join
+  circuits[circuits.csv] --> join
+  join --> country[French country key, USA names merged]
+  country --> keep["Keep grid > 0 and position > 0"]
+  keep --> season[Inclusive season range]
+  season --> rank[Rank by circuit or by country]
+  season --> filter[Also filter circuit]
+  filter --> bin["Count starts in each grid, finish cell"]
+  bin --> squares[One square per occupied cell]
 ```
 
 ## Layout
 
-The map uses a Natural Earth projection fitted to the panel width. A marker sits at its
-circuit's latitude and longitude. Distances between markers are geographic only and
-carry no data. Nearby circuits (especially in Europe) can overlap; zooming separates them.
-Markers keep a constant on-screen size while zooming. They are drawn with selection on
-top, then larger marks under smaller ones so every circuit stays clickable.
+[`GainRankChart.jsx`](src/components/GainRankChart.jsx) draws one horizontal bar per circuit or per country.
+The top row is the largest signed median. When one circuit is chosen, that chart keeps a single
+bar for the circuit, and [`GapDetailChart.jsx`](src/components/GapDetailChart.jsx) draws one
+bar per exact places-gained value. Those detail bars encode a count, so they all grow to the
+right. Row spacing is constant: it does not encode the difference between two medians or two gaps.
+The text at the end of a ranking row is the median, then the number of distinct races, for example
+`+6 · 10 courses`. The text at the end of a detail row is the number of classified starts.
 
-The side panel sits to the right of the map on wide screens and below it under 1000px.
+[`GridFinishChart.jsx`](src/components/GridFinishChart.jsx) draws one SVG. Columns are grid
+places from 1 on the left, and each place number is drawn above its column. Rows are classified finishes from P1 at the top. A dashed line
+runs through the cells where grid equals finish. Distance from that line is the number of
+places gained or lost, in classified places. It is not a lap gap, and it is not comparable
+across decades without the season filter: a gain of five places in a 33-car field is not the
+same event as a gain of five in a 20-car field.
 
 ## Visual encodings
 
-### Default mode (no highlighted constructor)
-
-| Channel | Meaning |
+| Data | Mark and channel |
 |---|---|
-| Position | Circuit coordinates |
-| Fill color | Team color of the outright leader at that circuit in the filtered seasons |
-| Gray fill (45% opacity) | Circuit with races in range but a tied top total or no classified winner |
-| Radius | Number of Grands Prix held there in the filtered seasons |
-| Faint small dot (radius 2, 20% opacity, not focusable) | Circuit with no Grand Prix in the filters |
-| Accent ring | Hover, keyboard focus or selection. Interaction feedback, not data |
+| Circuit or country, with none chosen | One ranking row. Order is the signed median, largest gain first |
+| Chosen circuit | Replaces the ranking with one summary bar, then one row per exact gap |
+| Signed median of places gained | Bar length from zero, and the first number at the end of the row. Positive is to the right |
+| Distinct races in the row | Text after the median, for example `10 courses`. Two classified starters in one race count once |
+| Exact places gained, in the circuit detail | One row, labeled with the signed gap. Order is the gap, largest gain first. A missing row means zero classified starts, not missing data. The row is not a button |
+| Opened square | A floating panel over the page, up to two at once. One row per classified start in that grid and finish: date, French country, circuit, driver, constructor. The title bar moves the panel |
+| Classified starts with that exact gap | Bar length from the left, and the count at the end of the row. The longest bar is the fullest gap in this circuit and season range |
+| Zero | Dashed vertical line on the summary bar: classified on the grid place. A detail row labeled 0 is that same case, and the detail chart has no zero line |
+| Bar fill | Constant `var(--text-h)`. It does not encode the sign or the group |
+| Selected ranking row | Accent stroke and accent row wash. This is interaction state |
+| Grid place | Column, left to right, one column per integer from 1 to the filtered maximum. The place number sits above the column |
+| Classified finish | Row, top to bottom, P1 at the top |
+| Number of starts in that pair | Fill color, from blue `#1d4ed8` at a single start to orange `#ff7a00` at the fullest cell, through magenta `#d946ef`. The count is also written in the square |
+| Grid equals finish | Dashed line through those cell centers. The line encodes equality, not a count |
+| Selected square | Accent stroke while its panel is open. Two squares can be selected. This is interaction state, not a data category |
+| Empty pair | No square. Absence means zero starts, not missing data |
+| Constructor, in the opened list | Existing color from [`teamColors.js`](src/lib/teamColors.js), plus the constructor name |
 
-### Highlight mode (one constructor selected)
+The detail bars use the fullest gap in the current circuit and season range as 100 percent of
+the plot width. A season or circuit change rebuilds that peak. Compare gaps with the printed
+count.
 
-| Channel | Meaning |
+The ranking domain is symmetric around zero and uses the largest absolute median in the
+current season range, or 1 when every median is 0. A season change rebuilds it, so two
+season ranges must be compared with the printed median, not with the bar length.
+
+The color domain is recalculated after every circuit and season filter. The ramp is
+`t = sqrt(count / peak)` in [`gridHeat.js`](src/lib/gridHeat.js), so the middle of the scale
+is not stuck on the low color. An orange square in one season range can represent fewer
+starts than a bluer square in another range. The digit inside the square is the comparable
+value. Text is white on the darker blue squares and `#141018` on the brighter orange squares. This scale
+counts starts. It does not use the race-result colors.
+
+Signed numbers use [`formatSigned.js`](src/lib/formatSigned.js): one decimal, a comma, and a
+plus sign when the value is positive. `+1,5` and `-0,5` are the display forms.
+
+## Labels and interactions
+
+French captions on the page:
+
+| Control or mark | Label |
 |---|---|
-| Fill color | The highlighted constructor's team color, on circuits where it won at least once |
-| Radius | That constructor's wins at the circuit |
-| Hollow ring (radius 3) | Circuit with races in range where it never won |
-| Faint small dot | Circuit with no Grand Prix in the filters |
+| Circuit filter | Chercher un circuit, then Circuit. Options are ordered by distinct race count, busiest first, with `Tous les circuits` above them. There is no country filter |
+| Seasons | Saison de début, Saison de fin, Réinitialiser |
+| Ranking switch | Par circuit, Par pays |
+| Ranking direction | À gauche : fini derrière la grille. 0 : même place qu’au départ. À droite : fini devant la grille |
+| Ranking legend | `+6 · 10 courses` is a median gain of six classified places across 10 races. Grid place minus finish: starting 10th and finishing 4th counts as +6. Starting first and winning counts as 0. Bar color does not change. Zero means classified on the grid place. Sort is that signed gap, largest first. Row spacing is not the gap between medians |
+| Square legend | Peu de départs, bleu. Beaucoup de départs, orange, par rapport à ce filtre. Classé à la place du départ. A click opens a draggable list. A second square opens another. Escape or Fermer closes the front list. A third square replaces the older list. Grid numbers are above the columns |
+| Summary | Départs classés, Médiane des places gagnées, Arrivées à la place de la grille, Grille non enregistrée, Non classés |
+| Handy counts | Courses in the current filter, and that count as a percentage of the busiest circuit in the same season range. Classified starts from grid 1, as a percentage of classified starts. Grid 1 finished in P1, as a percentage of grid-1 starts. All P1 finishes, and the share of those wins that started from grid 1. A percentage with no denominator is — |
 
-### Pie mode (several seasons selected)
+- With no circuit chosen, the ranking follows the chosen seasons only. Its order is the signed
+  median places gained, largest gain first, so a short-lived circuit can sit above Monza. The
+  race count printed beside the median does not set that order. Choosing a circuit, from the
+  menu or from a ranking row, replaces the list with that circuit: its median, its race count,
+  how many classified starts gained places, held the grid place, or lost places, and one row
+  for every exact gap. The gap rows only count starts. A second click on the summary bar, or Revoir tous les circuits, restores
+  the comparison. Par pays only regroups that comparison.
+- Filters on the squares: one circuit or all circuits, an inclusive first season, an inclusive
+  last season, and Réinitialiser.
+  The circuit menu counts distinct races that still have a classified start, not driver rows:
+  two starters in the same race count as one course. The busiest circuit is the first option.
+  The search box matches the circuit name or the country, without accents, and only narrows
+  that menu. It does not change the squares until a circuit is chosen. Réinitialiser clears
+  the search as well. Changing Par circuit / Par pays changes the ranking presentation, not the square totals.
+- The summary counts classified starts, the median places gained, starts that finished on
+  their grid place, starts with no recorded grid, and unclassified starts. The last two follow
+  the same circuit and season filters.
+- The handy counts use that same slice. Courses are distinct races. The maximum is the busiest
+  circuit in the season range, even when one circuit is selected. Grid 1 is the pole. P1 is a
+  classified win. A grid-1 win is both. Percentages are half-up to one decimal.
+- Hover or keyboard focus shows the grid, the finish and the count. A square or a ranking row
+  is a button: click it, or press Enter or Space. Choosing a square opens a floating panel.
+  Choosing another square opens a second panel, and the matrix stays clickable. Dragging the
+  title bar moves that panel. Choosing the same square again closes its panel. Fermer closes
+  that panel. Escape closes the panel in front. A third square replaces the older of the two.
+- Each panel lists the date, the French country, the circuit, the driver and the constructor
+  for every classified start in that grid and finish, in season and round order. It is not
+  truncated. `P1` stays `P1`. A missing date is —. The gap chart does not open this list.
 
-The **Dots / Pie charts** toggle above the map switches the active markers to pies. It is
-disabled when the filtered races cover a single season, because then each circuit has a
-single race and a pie would always be a full disc. The page falls back to dots in that
-case, during playback for example, and returns to pies when the range widens again.
+## Limits
 
-| Channel | Meaning |
-|---|---|
-| Slice angle | Share of the circuit's wins in the filtered seasons |
-| Colored slices | The top 3 constructors at that circuit (standings order: wins, then who reached the total first), each in its team color, clockwise from 12 o'clock |
-| Gray slice (theme text color, 35% opacity) | "Others": all remaining winning constructors combined |
-| Highlight mode | Only the highlighted constructor's slice is colored; everyone else is "Others" |
-| Radius | Grands Prix held in range, in both default and highlight mode |
-| Plain gray dot | Circuit with races but no classified winner (no slice to draw) |
-| Thin slice borders | Theme background color, so two adjacent teams with the same color stay separate. Not data |
-
-Shares use win counts: a shared win counts once for each credited constructor, so the
-denominator is the sum of credited wins, not the number of races. A tied leader shows
-as equal slices. The top-3 limit (`PIE_TOP_CONSTRUCTORS`) keeps small pies readable.
-The full ranking is in the circuit panel.
-
-### Scales
-
-```text
-radius = 3 + 9 × sqrt(clamp(value / M, 0, 1))
-default and pie modes: value = Grands Prix in range,
-                       M = most Grands Prix at one circuit in the whole archive (Monza, 76)
-highlight dots:        value = highlighted constructor's wins in range,
-                       M = its most wins at one circuit in the whole archive
-M falls back to 1 when it would be 0
-```
-
-The scale is square-root, so area grows roughly with the value. Units are screen pixels.
-**The domain is fixed by the whole archive and does not change with the filters.** A dot
-therefore means the same thing in every season range. A single season gives each circuit
-about 4px, so neighbouring circuits in one country stay distinct, and the largest marker
-appears only at a circuit with many races in range. Filtering never enlarges the dots.
-The 3px minimum means areas are not exactly proportional.
-
-### Colors
-
-Constructor colors come from [`teamColors.js`](src/lib/teamColors.js), the same source as
-the Drivers page (for example Ferrari `#e80020`, McLaren `#ff8000`, Mercedes `#27f4d2`).
-Unknown historical teams hash into D3's `schemeTableau10`, so **two teams can share a
-color**: names in the tooltip, panel and legend remain the reference. Colors are
-categorical identity, not performance.
-
-Precedence: a tie or a missing winner overrides any team color (gray). In highlight
-mode, the highlighted team's color replaces the leader's. Land, borders, gray markers and
-the accent ring use the theme tokens from [`index.css`](src/index.css) and adapt to light
-and dark themes. The legend's default swatch samples three team colors to mean "a team
-color", not one specific team.
-
-### Season-by-season history (circuit panel)
-
-`seasonTimeline` and `decadeRows` in [`circuitWins.js`](src/lib/circuitWins.js) build one
-cell per season of the **filter's** range: From season (or the archive's first season)
-to To season (or its latest), inclusive. The range does not stop at the circuit's own
-first or last race. Cells are placed chronologically in a grid with one row per decade
-(labeled `1950s`, `1960s`, …) and one column per final digit (0–9). Slots outside the
-range are left blank.
-
-| Cell | Meaning |
-|---|---|
-| Team color | The circuit hosted a Grand Prix that season, won by that constructor |
-| Stacked bands | Several Grands Prix at the circuit that season (for example 2020), one band per race in date order |
-| Left/right split inside a band | Shared win credited to two constructors |
-| Gray (theme border color) | Circuit not used that season |
-| Hatched gray | Grand Prix held but no classified winner |
-| Accent outline | Hovered or focused season (interaction, not data) |
-
-The country filter does not change the cells, since the circuit's country is fixed.
-A summary line above the grid gives "Used in N of M seasons (from–to)".
-
-## Labels and details
-
-- **Summary row:** selected season range (and country), Grands Prix, circuits with races
-  in range, and the number of constructors leading at least one circuit outright. In
-  highlight mode it states how many circuits the team won at.
-- **Map legend:** explains the color, gray or hollow, slice and size meanings for the active mode.
-- **Tooltip (hover or keyboard focus):** circuit name, location and country, Grands Prix and
-  seasons in range, the leader with its win total (or the tied constructors, or "No
-  classified winner recorded"), in highlight mode that constructor's wins, and in pie
-  mode the win share of each slice as a percentage. Inactive
-  circuits show their all-time season span. Each marker's `aria-label` has the same text.
-- **Panel, no circuit selected:** "Who rules the most circuits?" leaderboard showing the top
-  10 constructors with a "Show all" toggle. The number and bar show outright leads; a
-  smaller "+N" adds tied leads.
-- **Panel, circuit selected:** name, location, Grands Prix, seasons and number of winning
-  constructors. Wins by constructor are bars showing the top 8 with a "Show all" toggle.
-  A note appears when the lead is tied. In the season-by-season grid, hovering or focusing
-  a cell shows a line under the grid, for example "1980 · Austrian Grand Prix: Renault"
-  or "1995 · circuit not used this season". Each cell also has the same text as its
-  `aria-label` and title. A legend lists team color, not used, several Grands Prix and
-  (when present) no classified winner. The grid is one tab stop: arrow keys move by a
-  season (left/right) or a decade (up/down), and Home/End jump to the range bounds.
-
-## Interactions
-
-- **From / To season** (native selects): inclusive range. Changes the data, the scales
-  and the leaders.
-- **Play seasons:** steps through seasons one at a time (From = To = season, 1.2s each),
-  starting from the chosen From season. Any manual filter change pauses it.
-- **Host country:** limits the races to circuits in that country. Other circuits become
-  faint.
-- **Highlight a constructor:** a select listing every constructor with at least one win
-  in the archive. Clicking a bar in either panel list toggles the same highlight.
-- **Select a circuit:** click a marker, or Tab to it and press Enter or Space. Clicking it
-  again, clicking the empty map or "← All circuits" returns to the leaderboard.
-- **Dots / Pie charts:** changes only the marker style, not the data. It is disabled for a
-  single season, with a note if pies were chosen.
-- **Zoom/pan:** drag, scroll wheel, or +, − and Reset buttons. This changes the presentation
-  only. Zoom transitions are skipped with `prefers-reduced-motion`. Resizing the window
-  resets the zoom.
-- **Reset** clears seasons, country and highlight. It keeps the selected circuit.
-
-Loading, CSV error with retry, invalid season range and "no Grand Prix matches these
-filters" states are handled.
-
-## Interpretation limits
-
-- Only Grand Prix results count. Sprint races, championship points and standings are not used.
-- Constructors are counted by archive ID: renamed or successor teams (Toleman, Benetton,
-  Renault, Alpine; Minardi, Toro Rosso, AlphaTauri, RB; and so on) stay separate, and
-  engine-named entries such as "McLaren-Ford" or "Lotus-Climax" are separate from
-  "McLaren" or "Team Lotus".
-- A circuit ID covers every layout used at that venue. Changes to a track over time
-  are not distinguished.
-- Circuits with many races naturally accumulate more wins. Leads at circuits that held
-  one or two Grands Prix are fragile.
-- Coverage depends on the local archive (currently 1950 to its latest season with results).
+- Races without a result row are not included. A season in the year list is a season that has results.
+- Pit-lane and unrecorded grids are outside the squares. So are retirements and other results
+  with no classified position. A circuit with many retirements can look more predictable than it is.
+- Qualifying times are not compared. The grid already includes penalties, so it is the start
+  that the race actually used.
+- Points and sprint results are not part of the count. The median is a median of places, not of points.
+- A median near zero can still hide a wide spread. The squares show that spread, and so does
+  the exact-gap list of a chosen circuit. The comparison ranking does not.
+- Par pays adds every circuit of a country into one median. France, Spain, Italy, the United
+  Kingdom, Germany, Japan and the United States mix different tracks. Monaco does not.
+  That grouping does not filter the squares.
+- Team color identifies the constructor in the list. It does not encode a gain or a loss.
+- The ranking bar color does not encode a category. Position relative to zero and the signed number do.
 
 ## Implementation and validation
 
-- Data: [`loadCircuits.js`](src/lib/loadCircuits.js), [`circuitWins.js`](src/lib/circuitWins.js),
-  [`circuitMarkers.js`](src/lib/circuitMarkers.js)
-- UI: [`CircuitExplorer.jsx`](src/CircuitExplorer.jsx), [`CircuitMap.jsx`](src/components/CircuitMap.jsx),
-  [`CircuitPanel.jsx`](src/components/CircuitPanel.jsx), [`CircuitExplorer.css`](src/CircuitExplorer.css)
-- Tests: [`tests/circuitWins.test.js`](tests/circuitWins.test.js) cover circuit indexing and
-  missing coordinates, classified-P1 wins (`positionOrder` ignored), shared drives and
-  duplicate rows, races without results, inclusive and reversed filters, tie ordering,
-  leaderboard counts, the radius scale and its fixed archive domain, marker kinds and
-  colors in both modes, pie win shares (top constructors, Others, highlight, empty), the
-  season timeline over the filter range (unused seasons, two races in one season, reversed
-  range) and its decade slots, and a
-  real-archive check: every race joins a circuit, win totals reconcile, and Ferrari
-  leads Monza. Run the [README validation commands](README.md#validation).
+- Transformation: [`src/lib/gridFinish.js`](src/lib/gridFinish.js)
+- Country and status labels: [`src/lib/countryLabels.js`](src/lib/countryLabels.js), [`src/lib/statusLabels.js`](src/lib/statusLabels.js)
+- Loading: [`src/lib/loadCircuitBoard.js`](src/lib/loadCircuitBoard.js)
+- Page and charts: [`src/Races.jsx`](src/Races.jsx), [`src/components/GainRankChart.jsx`](src/components/GainRankChart.jsx), [`src/components/GapDetailChart.jsx`](src/components/GapDetailChart.jsx), [`src/components/GridFinishChart.jsx`](src/components/GridFinishChart.jsx), [`src/components/GridDetailPanel.jsx`](src/components/GridDetailPanel.jsx)
+- Tests: [`tests/gridHeat.test.js`](tests/gridHeat.test.js) covers the blue-to-orange ramp and the text contrast. [`tests/gridFinish.test.js`](tests/gridFinish.test.js) covers exclusion of a pit-lane
+  retirement, the unused `positionOrder`, a missing circuit label, inclusive filters,
+  the rebuilt axis maximum, the median, the merged United States names, ranking order, and the
+  exact-gap detail of one circuit, and the pole, win and race-count shares.
+  [`tests/frenchLabels.test.js`](tests/frenchLabels.test.js) checks that every country in
+  `circuits.csv` and every status in `status.csv` has a French display label.

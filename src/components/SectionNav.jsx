@@ -1,10 +1,10 @@
 import './SectionNav.css'
 
-export default function SectionNav({ activeSection, onDrivers, onConstructors, onCircuits }) {
+export default function SectionNav({ activeSection, onDrivers, onConstructors, onRaces }) {
   const sections = [
     ['drivers', 'Drivers', onDrivers],
     ['constructors', 'Constructors', onConstructors],
-    ['circuits', 'Circuits', onCircuits],
+    ['races', 'Races', onRaces],
   ]
 
   return (
@@ -21,8 +21,8 @@ export default function SectionNav({ activeSection, onDrivers, onConstructors, o
           <span aria-hidden="true">↗</span>
         </button>
       ))}
-      <button type="button" className="section-capsule" disabled aria-label="Races, coming soon">
-        <span>Races</span>
+      <button type="button" className="section-capsule" disabled aria-label="Circuits, coming soon">
+        <span>Circuits</span>
         <span className="section-capsule__soon">Soon</span>
       </button>
     </nav>

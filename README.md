@@ -14,6 +14,7 @@ lien kaggle : https://www.kaggle.com/datasets/jtrotman/formula-1-race-data?selec
 ## Project guidelines
 
 See [AGENT.md — project style and contribution rules](AGENT.md).
+See [AGENT.md — project style and contribution rules](AGENT.md).
 Every new visualization page must include its own root-level `<Topic>Viz.md`
 explaining the data pipeline and visual encodings, linked from this README.
 
@@ -24,10 +25,9 @@ npm install
 npm run dev
 ```
 
-Use the **Drivers** or **Circuits** capsule below the top bar to open a visualization.
-Constructors and Races are placeholders for future visualizations.
-Use the **Drivers** or **Constructors** capsule below the top bar to open an explorer.
-Races and Circuits are placeholders for future visualizations.
+Use the capsules below the top bar. **Drivers** opens the championship timeline. **Constructors**
+opens the speed and reliability explorer. **Races** opens the grid-against-finish chart.
+Circuits is still a placeholder.
 
 ## Driver championship timeline
 
@@ -41,12 +41,11 @@ for the standings join, medal colors, scales, keyboard access and limits.
 for the engine-failure classification, the three engine eras, the linked scatter plot,
 heatmap and season timeline, the points-lost estimate and its limits.
 
-## Circuit constructor map
+## Grid against finish
 
-A world map of every circuit, colored by the constructor with the most Grand Prix wins
-there, with season, country and constructor filters.
 See [CircuitViz.md — data transformation pipeline and visual encodings](CircuitViz.md)
-for the win definition, aggregation, tie rules, marker scales, colors and limits.
+for which starts are counted, how places gained are calculated, and how the French
+labels, the country filter, the ranking and the blue-to-orange square scale should be read.
 
 ## Validation
 

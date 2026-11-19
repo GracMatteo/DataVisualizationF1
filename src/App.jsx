@@ -5,12 +5,12 @@ import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
 const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
-const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
+const Races = lazy(() => import('./Races.jsx'))
 
-const PAGES = {
-  drivers: { Page: Dashboard, label: 'driver' },
-  constructors: { Page: ConstructorDashboard, label: 'constructor' },
-  circuits: { Page: CircuitExplorer, label: 'circuit' },
+const PAGE_LABEL = {
+  drivers: 'driver',
+  constructors: 'constructor',
+  races: 'race',
 }
 
 function App() {
@@ -20,13 +20,13 @@ function App() {
     onHome: () => setSection(null),
     onDrivers: () => setSection('drivers'),
     onConstructors: () => setSection('constructors'),
-    onCircuits: () => setSection('circuits'),
+    onRaces: () => setSection('races'),
   }
 
   if (section) {
-    const { Page, label } = PAGES[section]
+    const Page = section === 'drivers' ? Dashboard : section === 'constructors' ? ConstructorDashboard : Races
     return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
+      <Suspense fallback={<main className="page-status" role="status">Opening the {PAGE_LABEL[section]} explorer…</main>}>
         <Page {...navigation} />
       </Suspense>
     )
@@ -41,11 +41,7 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav
-          onDrivers={navigation.onDrivers}
-          onConstructors={navigation.onConstructors}
-          onCircuits={navigation.onCircuits}
-        />
+        <SectionNav {...navigation} />
       </div>
 
       <section className="landing__hero">
