@@ -79,7 +79,7 @@ right. Row spacing is constant: it does not encode the difference between two me
 The text at the end of a ranking row is the median, then the number of distinct races, for example
 `+6 · 10 courses`. The text at the end of a detail row is the number of classified starts.
 
-[`GridFinishChart.jsx`](src/components/GridFinishChart.jsx) draws one SVG. Columns are grid
+[`GridFinishChart.jsx`](src/components/GridFinishChart.jsx) draws one SVG. The drawing scales to the full width of its panel, and the panel does not clip it in a nested scroll: the page scrolls instead. Columns are grid
 places from 1 on the left, and each place number is drawn above its column. Rows are classified finishes from P1 at the top. A dashed line
 runs through the cells where grid equals finish. Distance from that line is the number of
 places gained or lost, in classified places. It is not a lap gap, and it is not comparable
@@ -137,10 +137,12 @@ French captions on the page:
 | Ranking switch | Par circuit, Par pays |
 | Ranking direction | À gauche : fini derrière la grille. 0 : même place qu’au départ. À droite : fini devant la grille |
 | Ranking legend | `+6 · 10 courses` is a median gain of six classified places across 10 races. Grid place minus finish: starting 10th and finishing 4th counts as +6. Starting first and winning counts as 0. Bar color does not change. Zero means classified on the grid place. Sort is that signed gap, largest first. Row spacing is not the gap between medians |
-| Square legend | Peu de départs, bleu. Beaucoup de départs, orange, par rapport à ce filtre. Classé à la place du départ. A click opens a draggable list. A second square opens another. Escape or Fermer closes the front list. A third square replaces the older list. Grid numbers are above the columns |
+| Axis captions | Axe horizontal : position de départ sur la grille. Axe vertical : position d’arrivée classée, P1 en haut |
+| Square legend | Faible effectif de départs classés. Effectif le plus élevé dans le filtre courant. Arrivée classée à la position de grille. Selecting a square opens its list. A second square opens another. The title bar moves a list. Fermer, Escape, or selecting the same square again closes the front list. A third selection replaces the older list |
 | Summary | Départs classés, Médiane des places gagnées, Arrivées à la place de la grille, Grille non enregistrée, Non classés |
 | Handy counts | Courses in the current filter, and that count as a percentage of the busiest circuit in the same season range. Classified starts from grid 1, as a percentage of classified starts. Grid 1 finished in P1, as a percentage of grid-1 starts. All P1 finishes, and the share of those wins that started from grid 1. A percentage with no denominator is — |
 
+- The ranking panel is kept in [`src/Races.jsx`](src/Races.jsx) and is not rendered while `showPlaceRank` is false. Set that constant to true to put "Qui la grille prédit le moins" back on the page. The behavior below is unchanged when it is shown.
 - With no circuit chosen, the ranking follows the chosen seasons only. Its order is the signed
   median places gained, largest gain first, so a short-lived circuit can sit above Monza. The
   race count printed beside the median does not set that order. Choosing a circuit, from the
@@ -169,6 +171,14 @@ French captions on the page:
 - Each panel lists the date, the French country, the circuit, the driver and the constructor
   for every classified start in that grid and finish, in season and round order. It is not
   truncated. `P1` stays `P1`. A missing date is —. The gap chart does not open this list.
+  The panel is wide enough to show the constructor without a horizontal scrollbar.
+- A driver name in that list opens the driver championship timeline with that driver alone.
+  The season of the selected start is outlined in red on that timeline. A season with no
+  championship standing has no dot to outline.
+- The Pilote column header opens every driver of that square at once, one lane per driver.
+  Every season with a start in that square is outlined in red, so a driver who appears twice
+  in the square gets two outlined seasons. The number of lanes is not capped, so a busy
+  square such as grid 1 to P1 gives a long timeline.
 
 ## Limits
 

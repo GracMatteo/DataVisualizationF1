@@ -15,10 +15,17 @@ const PAGE_LABEL = {
 
 function App() {
   const [section, setSection] = useState(null)
+  const [driverFocus, setDriverFocus] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
-    onHome: () => setSection(null),
-    onDrivers: () => setSection('drivers'),
+    onDrivers: (marks) => {
+      const list = Array.isArray(marks) ? marks.filter((mark) => mark?.driverId != null) : []
+      setDriverFocus(list.length ? {
+        driverIds: [...new Set(list.map((mark) => mark.driverId))],
+        marks: list.map((mark) => ({ driverId: mark.driverId, year: mark.year ?? null })),
+      } : null)
+      setSection('drivers')
+    },
     onConstructors: () => setSection('constructors'),
     onRaces: () => setSection('races'),
   }
@@ -27,7 +34,7 @@ function App() {
     const Page = section === 'drivers' ? Dashboard : section === 'constructors' ? ConstructorDashboard : Races
     return (
       <Suspense fallback={<main className="page-status" role="status">Opening the {PAGE_LABEL[section]} explorer…</main>}>
-        <Page {...navigation} />
+        <Page {...navigation} {...(section === 'drivers' ? { driverFocus } : {})} />
       </Suspense>
     )
   }

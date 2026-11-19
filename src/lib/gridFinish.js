@@ -70,6 +70,7 @@ export function collectGridStarts(tables, circuitsById) {
       country: circuit?.country ?? null,
       countryKey: country.key,
       countryLabel: country.label,
+      driverId: result.driverId,
       driverName: driver?.name ?? `Driver ${result.driverId}`,
       constructorName: constructor?.name ?? 'Unknown constructor',
       constructorRef: constructor?.constructorRef ?? null,

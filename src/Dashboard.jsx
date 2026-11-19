@@ -10,15 +10,15 @@ import { buildDriverTimeline, getDriverTimelineDefaults } from './lib/buildDrive
 import { buildChampionshipLanes, buildFinalStandings, loadDriverStandings } from './lib/championshipStandings.js'
 import './Dashboard.css'
 
-export default function Dashboard({ onBack, onDrivers, onConstructors, onRaces }) {
+export default function Dashboard({ onBack, onDrivers, onConstructors, onRaces, driverFocus }) {
   const [tables, setTables] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, setSelectedId] = useState(() => driverFocus?.driverIds?.[0] ?? null)
   const [fromYear, setFromYear] = useState('')
   const [toYear, setToYear] = useState('')
   const [selectedSeason, setSelectedSeason] = useState(null)
-  const [timelineIds, setTimelineIds] = useState(null)
+  const [timelineIds, setTimelineIds] = useState(() => driverFocus?.driverIds?.length ? driverFocus.driverIds : null)
   const [standingRows, setStandingRows] = useState(null)
   const [standingsError, setStandingsError] = useState(null)
 
@@ -52,7 +52,6 @@ export default function Dashboard({ onBack, onDrivers, onConstructors, onRaces }
     toYear: toYear === '' ? undefined : Number(toYear),
   }) : null, [tables, finalStandings, compareIds, fromYear, toYear])
   const reversedRange = fromYear !== '' && toYear !== '' && Number(fromYear) > Number(toYear)
-
   function resetFilters() {
     setFromYear('')
     setToYear('')
@@ -103,7 +102,7 @@ export default function Dashboard({ onBack, onDrivers, onConstructors, onRaces }
               <div className="empty-state" role="alert"><h3>We couldn’t load the championship standings.</h3><p>{standingsError}</p><button className="btn btn--primary" type="button" onClick={() => { setStandingsError(null); setAttempt((value) => value + 1) }}>Try again</button></div>
             ) : !championshipLanes ? (
               <div className="empty-state" role="status"><span className="loading-dot" />Loading championship standings…</div>
-            ) : <DriverChampionshipChart lanes={championshipLanes} selected={selectedSeason} onSelectSeason={setSelectedSeason} />}
+            ) : <DriverChampionshipChart lanes={championshipLanes} selected={selectedSeason} marked={driverFocus?.marks} onSelectSeason={setSelectedSeason} />}
           </section>
 
           <div className="explorer-notes">

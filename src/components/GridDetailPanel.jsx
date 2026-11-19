@@ -5,7 +5,7 @@ import { getTeamColor } from '../lib/teamColors.js'
 let layer = 30
 
 function placePanel(index) {
-  const width = Math.min(640, window.innerWidth - 32)
+  const width = Math.min(880, window.innerWidth - 32)
   return {
     x: Math.max(16, window.innerWidth - width - 24 - index * 28),
     y: 72 + index * 40,
@@ -19,7 +19,8 @@ function formatRaceDate(value) {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
 }
 
-export default function GridDetailPanel({ cell, index, onClose, onFocus }) {
+export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenDrivers }) {
+  const linked = cell.entries.filter((entry) => entry.driverId != null)
   const titleId = useId()
   const panelRef = useRef(null)
   const [position, setPosition] = useState(() => placePanel(index))
@@ -79,7 +80,7 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus }) {
         <div>
           <p className="eyebrow">Grille P{cell.grid} → arrivée P{cell.position}</p>
           <h2 id={titleId}>{formatStarts(cell.count, true)}</h2>
-          <p>Écart {formatSignedPlaces(cell.grid - cell.position)}. Partis de la place {cell.grid}, classés à la place {cell.position}. Glissez la barre pour déplacer.</p>
+          <p>Écart {formatSignedPlaces(cell.grid - cell.position)}. Position de grille {cell.grid}, position d’arrivée {cell.position}. La barre de titre déplace cette liste.</p>
         </div>
         <button type="button" className="text-button" onClick={onClose}>Fermer</button>
       </div>
@@ -90,7 +91,18 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus }) {
               <th scope="col">Date</th>
               <th scope="col">Pays</th>
               <th scope="col">Circuit</th>
-              <th scope="col">Pilote</th>
+              <th scope="col">
+                {linked.length ? (
+                  <button
+                    type="button"
+                    className="driver-link driver-link--header"
+                    title="Afficher tous les pilotes de cette case dans la visualisation Pilotes"
+                    onClick={() => onOpenDrivers?.(linked)}
+                  >
+                    Pilote
+                  </button>
+                ) : 'Pilote'}
+              </th>
               <th scope="col">Écurie</th>
             </tr>
           </thead>
@@ -100,7 +112,13 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus }) {
                 <td>{formatRaceDate(entry.date)}</td>
                 <td>{entry.countryLabel}</td>
                 <td>{entry.circuitName}</td>
-                <td>{entry.driverName}</td>
+                <td>
+                  {entry.driverId == null ? entry.driverName : (
+                    <button type="button" className="driver-link" onClick={() => onOpenDrivers?.([entry])}>
+                      {entry.driverName}
+                    </button>
+                  )}
+                </td>
                 <td className="constructor-cell"><span className="legend-dot" style={{ backgroundColor: getTeamColor(entry.constructorRef) }} />{entry.constructorName}</td>
               </tr>
             ))}

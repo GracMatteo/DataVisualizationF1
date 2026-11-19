@@ -16,8 +16,11 @@ export default function GridFinishChart({ model, selectedKeys, onSelect }) {
     const plot = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`)
     const width = model.maxGrid * CELL
     const height = model.maxPosition * CELL
-    svg.attr('width', width + MARGIN.left + MARGIN.right)
-      .attr('height', height + MARGIN.top + MARGIN.bottom)
+    const svgWidth = width + MARGIN.left + MARGIN.right
+    const svgHeight = height + MARGIN.top + MARGIN.bottom
+    svg.attr('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
+      .attr('width', svgWidth)
+      .attr('height', svgHeight)
 
     const x = scaleBand().domain(range(1, model.maxGrid + 1)).range([0, width]).padding(0.12)
     const y = scaleBand().domain(range(1, model.maxPosition + 1)).range([0, height]).padding(0.12)
@@ -101,8 +104,8 @@ export default function GridFinishChart({ model, selectedKeys, onSelect }) {
     <svg ref={svgRef} role="group" aria-labelledby={titleId} aria-describedby={descriptionId}>
       <title id={titleId}>Arrivée classée selon la grille de départ</title>
       <desc id={descriptionId}>
-        Chaque carré compte les départs classés. Les places de grille sont au-dessus des colonnes. L’arrivée se lit vers le bas, avec P1 en haut.
-        Le trait pointillé marque les pilotes classés à leur place de départ. Le bleu est un petit nombre de départs, l’orange un grand nombre dans le filtre en cours. Sélectionner un carré ouvre une liste déplaçable. Une deuxième sélection en ouvre une autre.
+        Chaque carré compte les départs classés pour une position de grille et une position d’arrivée. L’axe horizontal est la position de départ. L’axe vertical est la position d’arrivée classée, avec P1 en haut.
+        Le trait pointillé marque une arrivée à la position de grille. Le bleu indique un faible effectif, l’orange l’effectif le plus élevé dans le filtre courant. La sélection d’une case ouvre la liste des départs.
       </desc>
     </svg>
   )

@@ -16,6 +16,10 @@ function formatCount(value) {
   return value.toLocaleString('fr-FR')
 }
 
+// Unplugged for now. Set this to true to show "Qui la grille prédit le moins"
+// and the per-circuit gap chart again. The squares stay on the page either way.
+const showPlaceRank = false
+
 export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
   const [board, setBoard] = useState(null)
   const [error, setError] = useState(null)
@@ -174,7 +178,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
       <section className="dashboard-intro" aria-labelledby="races-title">
         <p className="eyebrow">Chaque départ classé</p>
         <h1 id="races-title">Où la grille <span>cesse de prédire l’arrivée.</span></h1>
-        <p>Chaque carré compte les pilotes partis de cette place et classés à cette place. Le trait pointillé marque une arrivée à la place du départ. Le classement compare les circuits, ou les pays.</p>
+        <p>Chaque carré compte les pilotes partis de cette place et classés à cette place. Le trait pointillé marque une arrivée à la place du départ.{showPlaceRank ? ' Le classement compare les circuits, ou les pays.' : ''}</p>
       </section>
 
       {error ? (
@@ -280,7 +284,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
             </section>
           )}
 
-          <section className="chart-panel rank-panel" aria-labelledby="rank-heading" ref={rankPanelRef}>
+          {showPlaceRank && <section className="chart-panel rank-panel" aria-labelledby="rank-heading" ref={rankPanelRef}>
             <div className="chart-panel__header">
               <div>
                 <p className="eyebrow">{focusRow ? 'Ce circuit, à chaque course' : 'Qui la grille prédit le moins'}</p>
@@ -360,7 +364,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
                 </ul>
               </>
             )}
-          </section>
+          </section>}
 
           <section className="chart-panel grid-panel" aria-labelledby="grid-heading">
             <div className="chart-panel__header">
@@ -368,7 +372,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
                 <p className="eyebrow">Grille de départ → arrivée classée</p>
                 <h2 id="grid-heading">{heading}</h2>
               </div>
-              <p className="grid-axis-key"><span>En haut : la grille</span><span>À gauche : l’arrivée, P1 en haut</span></p>
+              <p className="grid-axis-key"><span>Axe horizontal : position de départ sur la grille.</span><span>Axe vertical : position d’arrivée classée, P1 en haut.</span></p>
             </div>
             {reversedRange || !model.count ? (
               <div className="empty-state" role="status">
@@ -381,11 +385,11 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
                 <div className="grid-chart-scroll">
                   <GridFinishChart model={model} selectedKeys={panels.keys} onSelect={selectCell} />
                 </div>
-                <ul className="tree-legend" aria-label="Légende des carrés">
-                  <li><span className="legend-swatch" style={{ background: GRID_HEAT_LOW }} />Peu de départs, bleu</li>
-                  <li><span className="legend-swatch" style={{ background: GRID_HEAT_HIGH }} />Beaucoup de départs, orange, par rapport à ce filtre</li>
-                  <li><span className="legend-line" />Classé à la place du départ</li>
-                  <li>Un clic ouvre une liste. Un autre carré en ouvre une deuxième. Glissez la barre du titre pour la déplacer. Recliquer le même carré, Fermer ou Échap referme la liste au premier plan. Une troisième ouverture remplace la plus ancienne.</li>
+                <ul className="tree-legend" aria-label="Légende de la matrice">
+                  <li><span className="legend-swatch" style={{ background: GRID_HEAT_LOW }} />Faible effectif de départs classés.</li>
+                  <li><span className="legend-swatch" style={{ background: GRID_HEAT_HIGH }} />Effectif le plus élevé dans le filtre courant.</li>
+                  <li><span className="legend-line" />Arrivée classée à la position de grille.</li>
+                  <li>La sélection d’une case ouvre la liste des départs correspondants. Une deuxième case ouvre une autre liste. La barre de titre déplace la liste. Fermer, Échap, ou une nouvelle sélection de la même case referme la liste au premier plan. Une troisième sélection remplace la plus ancienne.</li>
                 </ul>
               </>
             )}
@@ -398,6 +402,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
               index={index}
               onClose={() => closePanel(cell.key)}
               onFocus={() => focusPanel(cell.key)}
+              onOpenDrivers={(entries) => onDrivers?.(entries.map((entry) => ({ driverId: entry.driverId, year: entry.year })))}
             />
           ))}
           <footer className="dashboard-footer">

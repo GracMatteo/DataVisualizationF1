@@ -27,8 +27,8 @@
 .rank-label { fill: var(--text-h); font: 12px var(--sans); }
 .rank-value { fill: var(--text); font: 12px var(--mono); }
 .grid-axis-key { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0; font-size: 0.75rem; }
-.grid-chart-scroll { overflow: auto; max-height: 72vh; background: var(--bg); }
-.grid-chart-scroll svg { display: block; }
+.grid-chart-scroll { background: var(--bg); }
+.grid-chart-scroll svg { display: block; width: 100%; height: auto; }
 .grid-axis text { fill: var(--text); font: 10px var(--mono); }
 .grid-diagonal { fill: none; stroke: var(--text); stroke-dasharray: 3 3; pointer-events: none; }
 .grid-cell { cursor: pointer; outline: none; }
@@ -45,7 +45,7 @@
 .rank-legend .legend-line { margin-top: 0.45rem; }
 .grid-dialog {
   position: fixed;
-  width: min(640px, calc(100vw - 2rem));
+  width: min(880px, calc(100vw - 2rem));
   max-height: min(70vh, 640px);
   margin: 0;
   padding: 0;
@@ -63,14 +63,16 @@
 .grid-dialog__bar .text-button { cursor: pointer; }
 .grid-dialog__bar h2 { margin: 0.1rem 0 0.25rem; font-size: 1.35rem; letter-spacing: -0.03em; }
 .grid-dialog__bar p { margin: 0; max-width: 62ch; font-size: 0.82rem; line-height: 1.45; }
-.grid-dialog .grid-table-scroll { overflow: auto; max-height: min(46vh, 420px); margin: 0 1.2rem 1.2rem; border: 1px solid var(--border); border-radius: 8px; }
+.grid-dialog .grid-table-scroll { overflow-x: hidden; overflow-y: auto; max-height: min(46vh, 420px); margin: 0 1.2rem 1.2rem; border: 1px solid var(--border); border-radius: 8px; }
 .grid-dialog table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.grid-dialog th, .grid-dialog td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.grid-dialog th, .grid-dialog td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--border); text-align: left; white-space: normal; }
+.driver-link { padding: 0; border: 0; background: none; color: var(--text-h); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 0.18em; }
+.driver-link--header { color: inherit; letter-spacing: inherit; text-transform: inherit; }
 .grid-dialog th { position: sticky; top: 0; background: var(--surface); color: var(--text); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.constructor-cell { display: flex; align-items: center; gap: 0.45rem; }
+.constructor-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; min-width: 0; }
 
 @media (max-width: 700px) {
-  .grid-chart-scroll, .rank-chart-scroll { max-height: 60vh; }
+  .rank-chart-scroll { max-height: 60vh; }
   .rank-toolbar { justify-items: start; }
   .circuit-picker { grid-template-columns: 1fr; }
 }
