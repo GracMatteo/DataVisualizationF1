@@ -5,19 +5,28 @@ import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
 const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
+const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
+
+const PAGES = {
+  drivers: { Page: Dashboard, label: 'driver' },
+  constructors: { Page: ConstructorDashboard, label: 'constructor' },
+  circuits: { Page: CircuitExplorer, label: 'circuit' },
+}
 
 function App() {
   const [section, setSection] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
+    onHome: () => setSection(null),
     onDrivers: () => setSection('drivers'),
     onConstructors: () => setSection('constructors'),
+    onCircuits: () => setSection('circuits'),
   }
 
   if (section) {
-    const Page = section === 'drivers' ? Dashboard : ConstructorDashboard
+    const { Page, label } = PAGES[section]
     return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the {section === 'drivers' ? 'driver' : 'constructor'} explorer…</main>}>
+      <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
         <Page {...navigation} />
       </Suspense>
     )
@@ -32,7 +41,11 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav onDrivers={navigation.onDrivers} onConstructors={navigation.onConstructors} />
+        <SectionNav
+          onDrivers={navigation.onDrivers}
+          onConstructors={navigation.onConstructors}
+          onCircuits={navigation.onCircuits}
+        />
       </div>
 
       <section className="landing__hero">

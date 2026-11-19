@@ -1,7 +1,11 @@
 import './SectionNav.css'
 
-export default function SectionNav({ activeSection, onDrivers, onConstructors }) {
-  const sections = [['drivers', 'Drivers', onDrivers], ['constructors', 'Constructors', onConstructors]]
+export default function SectionNav({ activeSection, onDrivers, onConstructors, onCircuits }) {
+  const sections = [
+    ['drivers', 'Drivers', onDrivers],
+    ['constructors', 'Constructors', onConstructors],
+    ['circuits', 'Circuits', onCircuits],
+  ]
 
   return (
     <nav className="section-nav" aria-label="Project visualizations">
@@ -17,12 +21,10 @@ export default function SectionNav({ activeSection, onDrivers, onConstructors })
           <span aria-hidden="true">↗</span>
         </button>
       ))}
-      {['Races', 'Circuits'].map((label) => (
-        <button key={label} type="button" className="section-capsule" disabled aria-label={`${label}, coming soon`}>
-          <span>{label}</span>
-          <span className="section-capsule__soon">Soon</span>
-        </button>
-      ))}
+      <button type="button" className="section-capsule" disabled aria-label="Races, coming soon">
+        <span>Races</span>
+        <span className="section-capsule__soon">Soon</span>
+      </button>
     </nav>
   )
 }

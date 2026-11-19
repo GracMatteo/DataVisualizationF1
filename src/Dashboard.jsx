@@ -10,7 +10,7 @@ import { buildDriverTimeline, getDriverTimelineDefaults } from './lib/buildDrive
 import { buildChampionshipLanes, buildFinalStandings, loadDriverStandings } from './lib/championshipStandings.js'
 import './Dashboard.css'
 
-export default function Dashboard({ onBack, onConstructors }) {
+export default function Dashboard({ onBack, onConstructors, onCircuits }) {
   const [tables, setTables] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -69,7 +69,7 @@ export default function Dashboard({ onBack, onConstructors }) {
         <span className="dashboard-header__tag">THE DRIVER ARCHIVE</span>
         <button type="button" className="text-button" onClick={onBack}>← Back home</button>
       </header>
-      <SectionNav activeSection="drivers" onConstructors={onConstructors} />
+      <SectionNav activeSection="drivers" onConstructors={onConstructors} onCircuits={onCircuits} />
 
       <section className="dashboard-intro" aria-labelledby="explorer-title">
         <p className="eyebrow">Side by side. Season by season.</p>
