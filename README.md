@@ -27,7 +27,7 @@ npm run dev
 
 Use the capsules below the top bar. **Drivers** opens the championship timeline. **Constructors**
 opens the speed and reliability explorer. **Races** opens the grid-against-finish chart.
-Circuits is still a placeholder.
+**Circuits** opens the constructor win map.
 
 ## Driver championship timeline
 
@@ -43,9 +43,16 @@ heatmap and season timeline, the points-lost estimate and its limits.
 
 ## Grid against finish
 
-See [CircuitViz.md — data transformation pipeline and visual encodings](CircuitViz.md)
+See [RaceViz.md — data transformation pipeline and visual encodings](RaceViz.md)
 for which starts are counted, how places gained are calculated, and how the French
 labels, the country filter, the ranking and the blue-to-orange square scale should be read.
+
+## Circuit constructor map
+
+A world map of every circuit, colored by the constructor with the most Grand Prix wins
+there, with season, country and constructor filters.
+See [CircuitViz.md — data transformation pipeline and visual encodings](CircuitViz.md)
+for the win definition, aggregation, tie rules, marker scales, colors and limits.
 
 ## Validation
 
@@ -58,6 +65,5 @@ npm run build
 Tests cover CSV normalization, missing values, result/status classification,
 chronological grouping, mid-season switches, filtering, stable team colors,
 per-driver result and summary consistency for every driver in the local archive,
-and final championship standings.
-tree/result consistency for every driver in the local archive, and circuit win
+final championship standings, grid-against-finish aggregation, and circuit win
 aggregation, ties, filters and map-marker scales (including a real-archive check).

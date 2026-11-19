@@ -14,7 +14,7 @@ import './CircuitExplorer.css'
 const PLAY_INTERVAL_MS = 1200
 const parseYear = (value) => (value === '' ? null : Number(value))
 
-export default function CircuitExplorer({ onHome, onDrivers, onConstructors }) {
+export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onRaces, onCircuits }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -120,7 +120,7 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors }) {
         <span className="dashboard-header__tag">THE CIRCUIT ARCHIVE</span>
         <button type="button" className="text-button" onClick={onHome}>← Back home</button>
       </header>
-      <SectionNav activeSection="circuits" onDrivers={onDrivers} onConstructors={onConstructors} />
+      <SectionNav activeSection="circuits" onDrivers={onDrivers} onConstructors={onConstructors} onRaces={onRaces} onCircuits={onCircuits} />
 
       <section className="dashboard-intro" aria-labelledby="circuits-title">
         <p className="eyebrow">One map. Every winning team.</p>

@@ -20,7 +20,7 @@ function formatCount(value) {
 // and the per-circuit gap chart again. The squares stay on the page either way.
 const showPlaceRank = false
 
-export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
+export default function Races({ onBack, onDrivers, onConstructors, onRaces, onCircuits }) {
   const [board, setBoard] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -173,7 +173,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces }) {
         <span className="dashboard-header__tag">GRILLE ET ARRIVÉE</span>
         <button type="button" className="text-button" onClick={onBack}>← Accueil</button>
       </header>
-      <SectionNav activeSection="races" onDrivers={onDrivers} onConstructors={onConstructors} onRaces={onRaces} />
+      <SectionNav activeSection="races" onDrivers={onDrivers} onConstructors={onConstructors} onRaces={onRaces} onCircuits={onCircuits} />
 
       <section className="dashboard-intro" aria-labelledby="races-title">
         <p className="eyebrow">Chaque départ classé</p>

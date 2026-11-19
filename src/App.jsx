@@ -6,11 +6,13 @@ import './App.css'
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
 const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
 const Races = lazy(() => import('./Races.jsx'))
+const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
 
-const PAGE_LABEL = {
-  drivers: 'driver',
-  constructors: 'constructor',
-  races: 'race',
+const PAGES = {
+  drivers: { Page: Dashboard, label: 'driver' },
+  constructors: { Page: ConstructorDashboard, label: 'constructor' },
+  races: { Page: Races, label: 'race' },
+  circuits: { Page: CircuitExplorer, label: 'circuit' },
 }
 
 function App() {
@@ -18,6 +20,7 @@ function App() {
   const [driverFocus, setDriverFocus] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
+    onHome: () => setSection(null),
     onDrivers: (marks) => {
       const list = Array.isArray(marks) ? marks.filter((mark) => mark?.driverId != null) : []
       setDriverFocus(list.length ? {
@@ -28,12 +31,13 @@ function App() {
     },
     onConstructors: () => setSection('constructors'),
     onRaces: () => setSection('races'),
+    onCircuits: () => setSection('circuits'),
   }
 
   if (section) {
-    const Page = section === 'drivers' ? Dashboard : section === 'constructors' ? ConstructorDashboard : Races
+    const { Page, label } = PAGES[section]
     return (
-      <Suspense fallback={<main className="page-status" role="status">Opening the {PAGE_LABEL[section]} explorer…</main>}>
+      <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
         <Page {...navigation} {...(section === 'drivers' ? { driverFocus } : {})} />
       </Suspense>
     )
