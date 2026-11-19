@@ -1,4 +1,5 @@
 import { OUTCOME_LEGEND } from './raceResults.js'
+import { getRaceGroupKey } from './raceResultGroups.js'
 
 export const POSITION_COLORS = {
   win: '#bb8b20',
@@ -11,12 +12,7 @@ export const POSITION_COLORS = {
 }
 
 export function getRaceColor(race) {
-  if (race.outcome === 'retired') return POSITION_COLORS.retired
-  if (race.outcome !== 'finished') return POSITION_COLORS.unclassified
-  if (race.position === 1) return POSITION_COLORS.win
-  if (race.position === 2) return POSITION_COLORS.second
-  if (race.position === 3) return POSITION_COLORS.third
-  return (race.points ?? 0) > 0 ? POSITION_COLORS.points : POSITION_COLORS.other
+  return POSITION_COLORS[getRaceGroupKey(race)]
 }
 
 export function getRaceDescription(race) {

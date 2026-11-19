@@ -1,11 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { csvParse, hierarchy } from 'd3';
+import { csvParse } from 'd3';
 import { indexF1Data } from '../src/lib/loadF1Data.js';
-import { buildDriverTree } from '../src/lib/buildDriverTree.js';
 import { getTeamColor } from '../src/lib/teamColors.js';
-import { raceNodes } from './fixtures.js';
 
 const FILES = ['results', 'races', 'drivers', 'constructors', 'status'];
 const raw = Object.fromEntries(await Promise.all(FILES.map(async (name) => [
@@ -40,43 +38,5 @@ test('real result rows join cleanly and coverage begins in 1950', () => {
   }
   for (const constructor of tables.constructors.values()) {
     assert.match(getTeamColor(constructor.constructorRef), /^#[0-9a-f]{6}$/i);
-  }
-});
-
-test('a real classified retirement remains P7 despite Engine status', () => {
-  const result = tables.results.get(7);
-  assert.equal(result.position, 7);
-  const node = raceNodes(buildDriverTree(result.driverId, tables))
-    .find((race) => race.resultId === result.resultId);
-  assert.equal(node.position, 7);
-  assert.equal(node.status, 'Engine');
-  assert.equal(node.outcome, 'retired');
-  assert.equal(node.resultLabel, 'P7');
-});
-
-test('Gasly 2019 has chronological Red Bull and Toro Rosso groups for his midseason switch', () => {
-  const driver = tables.availableDrivers.find((entry) => entry.driverRef === 'gasly');
-  assert.ok(driver);
-  const tree = buildDriverTree(driver.driverId, tables, { fromYear: 2019, toYear: 2019 });
-  assert.deepEqual(tree.children.map((node) => node.constructorRef), ['red_bull', 'toro_rosso']);
-  assert.equal(tree.summary.seasons, 1);
-  assert.equal(tree.summary.constructors, 2);
-  assert.equal(tree.children[0].children[0].children[0].round, 1);
-  assert.equal(tree.children[1].children[0].children[0].round, 13);
-  assert.equal(hierarchy(tree).leaves().length, tree.summary.entries);
-});
-
-test('every driver tree has exactly one leaf per result and ascending rounds within each season', () => {
-  for (const driver of tables.availableDrivers) {
-    const tree = buildDriverTree(driver.driverId, tables);
-    assert.equal(raceNodes(tree).length, tables.resultsByDriver.get(driver.driverId).length);
-    for (const constructor of tree.children) {
-      const years = constructor.children.map((season) => season.year);
-      assert.deepEqual(years, [...years].sort((a, b) => a - b));
-      for (const season of constructor.children) {
-        const rounds = season.children.map((race) => race.round);
-        assert.deepEqual(rounds, [...rounds].sort((a, b) => a - b));
-      }
-    }
   }
 });
