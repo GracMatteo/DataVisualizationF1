@@ -133,7 +133,7 @@ a working link to that document in `README.md`. Include both in the same change.
 
 1. Create a descriptive root-level file named `<Topic>Viz.md`, using PascalCase.
    Examples of naming: `DriverViz.md`, `ConstructorViz.md`, `CircuitViz.md`.
-2. Use [`DriverViz.md`](DriverViz.md) as the existing reference for detail and structure.
+2. Use [`DriverTimelineViz.md`](DriverTimelineViz.md) as the existing reference for detail and structure.
    Do not document a different topic by appending it to the driver guide.
 3. Add a relative Markdown link to the new document in [`README.md`](README.md), under
    its visualization's section or a clearly labeled documentation index. A mention

@@ -1,0 +1,67 @@
+/* Place colors are a fixed, documented encoding (medals plus green for the rest). Text inside dots stays dark on every fill. */
+.champ-chart { --place-gold: #c9a227; --place-silver: #a3a9b0; --place-bronze: #b06f35; --place-other: #2e9d5b; --place-none: #9a97a3; --dot-ink: #14121a; display: grid; gap: 1rem; min-width: 0; padding: 1.25rem 1.5rem 1.5rem; }
+@media (prefers-color-scheme: dark) {
+  .champ-chart { --place-gold: #e0b83a; --place-silver: #b8bec6; --place-bronze: #c8844a; --place-other: #3fb874; --place-none: #6e6b78; }
+}
+
+.champ-chart button { min-height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text-h); padding: 0.4rem 0.9rem; font-size: 0.8rem; cursor: pointer; }
+.champ-chart button:hover:not(:disabled) { border-color: var(--accent-border); background: var(--accent-bg); }
+
+.champ-chart__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; }
+.champ-chart__legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 0; padding: 0; list-style: none; color: var(--text); font-size: 0.76rem; }
+.champ-chart__legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.champ-chart__swatch { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18); }
+.champ-chart__swatch.is-champion { background: var(--place-gold); }
+.champ-chart__swatch.is-second { background: var(--place-silver); }
+.champ-chart__swatch.is-third { background: var(--place-bronze); }
+.champ-chart__swatch.is-other { background: var(--place-other); }
+.champ-chart__swatch.is-excluded { background: var(--place-none); }
+.champ-chart__swatch.is-provisional { box-shadow: none; border: 1.5px dashed var(--text-h); }
+.champ-chart__gap-key { width: 22px; border-top: 2px dashed var(--text); opacity: 0.6; }
+
+.champ-chart__figure { position: relative; min-width: 0; border-radius: 6px; }
+.champ-chart__figure:focus-visible { outline-offset: 4px; }
+.champ-chart__figure > svg { display: block; overflow: visible; }
+.champ-chart__empty { padding: 2.5rem 1rem; border: 1px dashed var(--border); border-radius: 8px; text-align: center; }
+.champ-chart__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.champ-chart__name { fill: var(--text-h); font-size: 13px; font-weight: 600; }
+.champ-chart__summary { fill: var(--text); font-size: 11px; }
+.champ-chart__lane-rule { stroke: var(--border); }
+.champ-chart__axis .domain, .champ-chart__axis .tick line { stroke: var(--border); }
+.champ-chart__axis text { fill: var(--text); font-family: var(--mono); font-size: 11px; }
+
+.champ-chart__link { stroke: var(--text); stroke-opacity: 0.55; stroke-width: 2; stroke-linecap: round; }
+.champ-chart__link.is-gap { stroke-dasharray: 3 5; stroke-opacity: 0.4; }
+.champ-chart__dot { cursor: pointer; }
+.champ-chart__hit { fill: transparent; }
+.champ-chart__mark { stroke: var(--bg); stroke-width: 2; }
+.champ-chart__dot text { fill: var(--dot-ink); font-family: var(--mono); font-weight: 700; text-anchor: middle; pointer-events: none; }
+.champ-chart__dot.is-provisional .champ-chart__mark { stroke: var(--text-h); stroke-dasharray: 2.5 2; stroke-width: 1.5; }
+.champ-chart__dot:hover .champ-chart__mark, .champ-chart__dot.is-active .champ-chart__mark { stroke: var(--text-h); stroke-width: 2; }
+.champ-chart__dot.is-selected .champ-chart__mark { stroke: var(--accent); stroke-width: 3; }
+
+.champ-chart__tooltip { position: absolute; z-index: 2; display: grid; gap: 0.15rem; min-width: 170px; max-width: min(260px, 70%); padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.76rem; pointer-events: none; transform: translateY(-50%); box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
+.champ-chart__tooltip strong { color: var(--text-h); font-size: 0.9rem; }
+.champ-chart__tooltip span { color: var(--text-h); }
+
+.champ-chart__note { color: var(--text); font-size: 0.74rem; line-height: 1.6; max-width: 80ch; }
+.champ-chart__table { max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.champ-chart__table table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.78rem; }
+.champ-chart__table caption { padding: 0.5rem 0.75rem; text-align: left; color: var(--text); font-size: 0.72rem; }
+.champ-chart__table th, .champ-chart__table td { padding: 0.35rem 0.75rem; border-top: 1px solid var(--border); text-align: left; color: var(--text); }
+.champ-chart__table th { color: var(--text-h); font-weight: 600; }
+.champ-chart__table thead th { position: sticky; top: 0; background: var(--surface); }
+
+@media (max-width: 640px) {
+  .champ-chart { padding: 1rem; }
+  .champ-chart__name { font-size: 12px; }
+}
+
+/* Team bands: the constructor identity color, washed out so dots and text stay on top. */
+.champ-chart { --band-opacity: 0.16; }
+@media (prefers-color-scheme: dark) { .champ-chart { --band-opacity: 0.22; } }
+.champ-chart__band { pointer-events: none; }
+.champ-chart__band rect { fill-opacity: var(--band-opacity); }
+.champ-chart__band text { fill: var(--text); font-size: 9px; letter-spacing: 0.02em; }
+.champ-chart__band-key { width: 18px; height: 12px; border-radius: 2px; background: linear-gradient(90deg, rgb(54 113 198 / 0.22) 50%, rgb(232 0 32 / 0.18) 50%); }

@@ -27,16 +27,10 @@ npm run dev
 Use the **Drivers** or **Constructors** capsule below the top bar to open an explorer.
 Races and Circuits are placeholders for future visualizations.
 
-## Driver career tree
+## Driver championship timeline
 
-See [DriverViz.md — data transformation pipeline and visual encodings](DriverViz.md)
-for the CSV joins, filtering, hierarchy construction, point-size scale, color rules,
-labels and interpretation limits.
-
-The tree follows **Driver → Constructor → Season → Result group → Race**.
-Open a season, then a P1, P2, P3, Points or DNF group to reveal individual races.
-Non-points finishes and other outcomes (such as DNS/DSQ) have separate groups;
-only groups containing results are shown.
+See [DriverTimelineViz.md — final championship place per season](DriverTimelineViz.md)
+for the standings join, medal colors, scales, keyboard access and limits.
 
 ## Constructor speed × reliability
 
@@ -55,4 +49,5 @@ npm run build
 
 Tests cover CSV normalization, missing values, result/status classification,
 chronological grouping, mid-season switches, filtering, stable team colors,
-and tree/result consistency for every driver in the local archive.
+per-driver result and summary consistency for every driver in the local archive,
+and final championship standings.
