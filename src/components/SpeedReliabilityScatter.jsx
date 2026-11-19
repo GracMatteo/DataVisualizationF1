@@ -6,7 +6,7 @@ import { QUADRANTS, formatPercent, getRankGroup, shortYear } from '../lib/reliab
 const HEIGHT = 440
 const MARGIN = { top: 28, right: 24, bottom: 52, left: 56 }
 
-export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, winsMax, labelChampions, highlightedId, selectedId, onHover, onSelect }) {
+export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, winsMax, labelChampions, linkedIds, teamColors, highlightedId, selectedId, onHover, onSelect }) {
   const containerRef = useRef(null)
   const svgRef = useRef(null)
   const [width, setWidth] = useState(800)
@@ -85,7 +85,7 @@ export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, wins
       .attr('transform', (row) => `translate(${x(row.avgGrid)},${y(row.failureRate)})`)
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('aria-label', (row) => `${row.name} ${row.year}: average grid P${row.avgGrid.toFixed(1)}, ${formatPercent(row.failureRate)} engine failures, ${row.finalPosition ? `finished P${row.finalPosition}` : 'final position not recorded'}, ${row.wins} wins. Show season detail.`)
+      .attr('aria-label', (row) => `${row.name} ${row.year}: average grid P${row.avgGrid.toFixed(1)}, ${formatPercent(row.failureRate)} engine failures, ${row.finalPosition ? `finished P${row.finalPosition}` : 'final position not recorded'}, ${row.wins} wins. Mark this season in both views.`)
       .on('mouseenter focus', showTooltip)
       .on('mouseleave blur', hideTooltip)
       .on('click', (event, row) => onSelect(row.id))
@@ -100,7 +100,8 @@ export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, wins
     dots.append('circle').attr('class', 'scatter-ring').attr('r', (row) => radius(row.wins) + 4)
     dots.append('circle').attr('class', 'scatter-mark')
       .attr('r', (row) => radius(row.wins))
-      .attr('fill', (row) => getRankGroup(row).color)
+      .attr('fill', (row) => teamColors?.get(row.constructorId) ?? getRankGroup(row).color)
+      .classed('is-champion', (row) => teamColors != null && row.isChampion)
     dots.append('text').attr('class', 'scatter-label')
       .attr('x', (row) => radius(row.wins) + 5).attr('dy', '0.35em')
       .classed('is-default', (row) => labelChampions && row.isChampion)
@@ -110,7 +111,7 @@ export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, wins
       scene.remove()
       setTooltip(null)
     }
-  }, [rows, splits, xMax, yMax, winsMax, labelChampions, width, onHover, onSelect])
+  }, [rows, splits, xMax, yMax, winsMax, labelChampions, teamColors, width, onHover, onSelect])
 
   // Linked highlight: hovering a constructor anywhere lights up all its seasons here.
   useEffect(() => {
@@ -118,9 +119,10 @@ export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, wins
       .classed('is-dimmed', (row) => highlightedId != null && row.constructorId !== highlightedId)
       .classed('is-active', (row) => row.constructorId === highlightedId || row.id === selectedId)
       .classed('is-selected', (row) => row.id === selectedId)
-      .filter((row) => row.constructorId === highlightedId || row.id === selectedId)
+      .classed('is-linked', (row) => linkedIds?.has(row.id) ?? false)
+      .filter((row) => row.constructorId === highlightedId || row.id === selectedId || (linkedIds?.has(row.id) ?? false))
       .raise()
-  }, [highlightedId, selectedId, rows, width, labelChampions])
+  }, [highlightedId, selectedId, linkedIds, rows, width, labelChampions, teamColors])
 
   const row = tooltip?.row
   return (
@@ -136,7 +138,7 @@ export default function SpeedReliabilityScatter({ rows, splits, xMax, yMax, wins
           <span>Average grid P{row.avgGrid.toFixed(1)}</span>
           <span>{row.failures} engine failures / {row.starts} starts · {formatPercent(row.failureRate)}</span>
           <span>{row.finalPosition ? `Championship P${row.finalPosition}` : 'Final position not recorded'} · {row.wins} wins</span>
-          <small>Select to open the season detail</small>
+          <small>Select to mark this season in both views</small>
         </div>
       )}
     </div>

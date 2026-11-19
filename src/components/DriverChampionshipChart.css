@@ -40,6 +40,7 @@
 .champ-chart__dot.is-provisional .champ-chart__mark { stroke: var(--text-h); stroke-dasharray: 2.5 2; stroke-width: 1.5; }
 .champ-chart__dot:hover .champ-chart__mark, .champ-chart__dot.is-active .champ-chart__mark { stroke: var(--text-h); stroke-width: 2; }
 .champ-chart__dot.is-selected .champ-chart__mark { stroke: var(--accent); stroke-width: 3; }
+.champ-chart__dot.is-linked .champ-chart__mark { stroke: #e10600; stroke-width: 3.5; stroke-dasharray: none; }
 
 .champ-chart__tooltip { position: absolute; z-index: 2; display: grid; gap: 0.15rem; min-width: 170px; max-width: min(260px, 70%); padding: 0.6rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.76rem; pointer-events: none; transform: translateY(-50%); box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
 .champ-chart__tooltip strong { color: var(--text-h); font-size: 0.9rem; }

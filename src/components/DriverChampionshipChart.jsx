@@ -21,7 +21,7 @@ function laneSummary(lane) {
   return `${titles} title${titles === 1 ? '' : 's'} · best ${best == null ? '—' : getPlaceLabel({ position: best })}`
 }
 
-export default function DriverChampionshipChart({ lanes, selected, onSelectSeason }) {
+export default function DriverChampionshipChart({ lanes, selected, marked, onSelectSeason }) {
   const instanceId = useId()
   const wrapRef = useRef(null)
   const sceneRef = useRef(null)
@@ -118,6 +118,7 @@ export default function DriverChampionshipChart({ lanes, selected, onSelectSeaso
         .classed('is-provisional', (season) => season.provisional)
         .classed('is-active', (season, seasonIndex) => active?.lane === laneIndex && active?.season === seasonIndex)
         .classed('is-selected', (season) => selected?.driverId === lane.driverId && selected?.year === season.year)
+        .classed('is-linked', (season) => marked?.some((mark) => mark.driverId === lane.driverId && mark.year === season.year) ?? false)
         .on('pointerenter', (event, season) => {
           setActive({ lane: laneIndex, season: lane.seasons.indexOf(season) })
           setPointer(true)
@@ -132,7 +133,7 @@ export default function DriverChampionshipChart({ lanes, selected, onSelectSeaso
         .text(dotText)
     })
     return () => { scene.selectAll('.champ-chart__dot').on('pointerenter', null).on('pointerleave', null).on('click', null) }
-  }, [lanes, x, innerWidth, labelWidth, height, radius, active, selected, onSelectSeason])
+  }, [lanes, x, innerWidth, labelWidth, height, radius, active, selected, marked, onSelectSeason])
 
   const move = (event) => {
     if (!hasData) return

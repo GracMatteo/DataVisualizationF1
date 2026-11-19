@@ -5,21 +5,39 @@ import './App.css'
 
 const Dashboard = lazy(() => import('./Dashboard.jsx'))
 const ConstructorDashboard = lazy(() => import('./ConstructorDashboard.jsx'))
+const Races = lazy(() => import('./Races.jsx'))
 const CircuitExplorer = lazy(() => import('./CircuitExplorer.jsx'))
 
 const PAGES = {
   drivers: { Page: Dashboard, label: 'driver' },
   constructors: { Page: ConstructorDashboard, label: 'constructor' },
+  races: { Page: Races, label: 'race' },
   circuits: { Page: CircuitExplorer, label: 'circuit' },
 }
 
 function App() {
   const [section, setSection] = useState(null)
+  const [driverFocus, setDriverFocus] = useState(null)
+  const [constructorFocus, setConstructorFocus] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
     onHome: () => setSection(null),
-    onDrivers: () => setSection('drivers'),
-    onConstructors: () => setSection('constructors'),
+    onDrivers: (marks) => {
+      const list = Array.isArray(marks) ? marks.filter((mark) => mark?.driverId != null) : []
+      setDriverFocus(list.length ? {
+        driverIds: [...new Set(list.map((mark) => mark.driverId))],
+        marks: list.map((mark) => ({ driverId: mark.driverId, year: mark.year ?? null })),
+      } : null)
+      setSection('drivers')
+    },
+    onConstructors: (marks) => {
+      const list = Array.isArray(marks) ? marks.filter((mark) => mark?.constructorId != null) : []
+      setConstructorFocus(list.length ? {
+        marks: list.map((mark) => ({ constructorId: mark.constructorId, name: mark.name ?? null, year: mark.year ?? null })),
+      } : null)
+      setSection('constructors')
+    },
+    onRaces: () => setSection('races'),
     onCircuits: () => setSection('circuits'),
   }
 
@@ -27,7 +45,11 @@ function App() {
     const { Page, label } = PAGES[section]
     return (
       <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
-        <Page {...navigation} />
+        <Page
+          {...navigation}
+          {...(section === 'drivers' ? { driverFocus } : {})}
+          {...(section === 'constructors' ? { constructorFocus } : {})}
+        />
       </Suspense>
     )
   }
@@ -41,11 +63,7 @@ function App() {
             <span className="brand__name">DataViz F1</span>
           </div>
         </header>
-        <SectionNav
-          onDrivers={navigation.onDrivers}
-          onConstructors={navigation.onConstructors}
-          onCircuits={navigation.onCircuits}
-        />
+        <SectionNav {...navigation} />
       </div>
 
       <section className="landing__hero">
