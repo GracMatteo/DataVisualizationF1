@@ -403,6 +403,7 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces, onCi
               onClose={() => closePanel(cell.key)}
               onFocus={() => focusPanel(cell.key)}
               onOpenDrivers={(entries) => onDrivers?.(entries.map((entry) => ({ driverId: entry.driverId, year: entry.year })))}
+              onOpenConstructors={(entries) => onConstructors?.(entries.map((entry) => ({ constructorId: entry.constructorId, name: entry.constructorName, year: entry.year })))}
             />
           ))}
           <footer className="dashboard-footer">

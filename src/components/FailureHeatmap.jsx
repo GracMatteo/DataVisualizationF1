@@ -11,7 +11,7 @@ const HEADER = 78
 const MIN_CELL = 22
 
 /** Constructor × season grid; each cell counts engine failures and the champion gets a gold outline. */
-export default function FailureHeatmap({ rows, constructors, eraId, highlightedId, selectedId, onHover, onSelect }) {
+export default function FailureHeatmap({ rows, constructors, eraId, linkedIds, teamColors, highlightedId, selectedId, onHover, onSelect }) {
   const containerRef = useRef(null)
   const svgRef = useRef(null)
   const [width, setWidth] = useState(900)
@@ -72,7 +72,14 @@ export default function FailureHeatmap({ rows, constructors, eraId, highlightedI
 
     rowGroups.append('text').attr('class', 'heatmap-name')
       .attr('x', LABEL_WIDTH - 10).attr('y', ROW_HEIGHT / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
+      .classed('is-compared', teamColors != null)
+      .style('fill', (constructor) => teamColors?.get(constructor.constructorId) ?? null)
       .text((constructor) => constructor.name.length > 17 ? `${constructor.name.slice(0, 16)}…` : constructor.name)
+    if (teamColors) {
+      rowGroups.append('rect').attr('class', 'heatmap-team-bar').attr('aria-hidden', true)
+        .attr('x', LABEL_WIDTH - 4).attr('y', 3).attr('width', 3).attr('height', ROW_HEIGHT - 6).attr('rx', 1.5)
+        .attr('fill', (constructor) => teamColors.get(constructor.constructorId))
+    }
 
     const cells = rowGroups.selectAll('g.heatmap-cell')
       .data((constructor) => years.map((year) => byId.get(`${constructor.constructorId}:${year}`)).filter(Boolean), (row) => row.id)
@@ -98,14 +105,16 @@ export default function FailureHeatmap({ rows, constructors, eraId, highlightedI
     cells.append('title').text((row) => `${row.name} ${row.year}: ${row.failures} engine failures in ${row.starts} starts${row.finalPosition ? ` · championship P${row.finalPosition}` : ''}${row.isChampion ? ' (champion)' : ''}`)
 
     return () => scene.remove()
-  }, [constructors, years, byId, maxFailures, cell, svgWidth, height, eraId, onHover, onSelect])
+  }, [constructors, years, byId, maxFailures, cell, svgWidth, height, eraId, teamColors, onHover, onSelect])
 
   useEffect(() => {
     const svg = select(svgRef.current)
     svg.selectAll('.heatmap-row')
       .classed('is-dimmed', (constructor) => highlightedId != null && constructor.constructorId !== highlightedId)
-    svg.selectAll('.heatmap-cell').classed('is-selected', (row) => row.id === selectedId)
-  }, [highlightedId, selectedId, constructors, cell, eraId])
+    svg.selectAll('.heatmap-cell')
+      .classed('is-selected', (row) => row.id === selectedId)
+      .classed('is-linked', (row) => linkedIds?.has(row.id) ?? false)
+  }, [highlightedId, selectedId, linkedIds, constructors, cell, eraId, teamColors])
 
   return (
     <div className="heatmap" ref={containerRef}>

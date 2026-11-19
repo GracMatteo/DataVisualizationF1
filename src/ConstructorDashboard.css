@@ -19,6 +19,22 @@
 
 .explorer-filters .filters-note { flex: 1 1 280px; font-size: 0.75rem; max-width: 60ch; }
 .era-tabs button { min-height: 44px; padding-inline: 1rem; }
+.team-filter { flex: 1 1 260px; max-width: 520px; }
+.team-filter > label { color: var(--text-h); font-size: 0.75rem; font-weight: 600; }
+.team-filter select { max-width: 280px; }
+.team-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.team-chips li { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0.2rem 0.15rem 0.55rem; border: 1px solid var(--team); border-radius: 999px; font-size: 0.78rem; color: var(--text-h); }
+.team-chips__swatch { width: 0.65rem; height: 0.65rem; border-radius: 50%; background: var(--team); }
+.team-chips li button:not(.text-button) { border: 0; background: none; color: var(--text); cursor: pointer; font-size: 1rem; line-height: 1; min-width: 28px; min-height: 28px; border-radius: 50%; }
+.team-chips li button:not(.text-button):hover, .team-chips li button:not(.text-button):focus-visible { background: var(--border); color: var(--text-h); }
+.team-chips__empty { color: var(--text); font-size: 0.7rem; }
+.team-chips li.team-chips__clear { border: 0; padding: 0; }
+.reliability-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: 0.78rem; }
+.reliability-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.legend-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.legend-dot--champion { background: transparent; border: 2px solid; box-sizing: border-box; }
+.scatter-mark.is-champion { stroke: #bb8b20; stroke-width: 3; }
+.heatmap-name.is-compared { font-weight: 600; }
 .era-tabs button[aria-pressed="true"] { background: var(--text-h); color: var(--bg); border-color: var(--text-h); }
 
 .chart-panel + .chart-panel { margin-top: 2rem; }
@@ -45,6 +61,7 @@
 .scatter-dot.is-dimmed .scatter-label { display: none; }
 .scatter-dot.is-active .scatter-ring, .scatter-dot:focus-visible .scatter-ring { stroke: var(--accent); }
 .scatter-dot.is-selected .scatter-ring { stroke: var(--text-h); stroke-width: 2.5; }
+.scatter-dot.is-linked .scatter-ring { stroke: #e10600; stroke-width: 3; }
 .scatter-tooltip { position: absolute; z-index: 2; width: 236px; transform: translateY(-100%); padding: 0.7rem; display: grid; gap: 0.2rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); box-shadow: 0 6px 24px #00000014; pointer-events: none; font-size: 0.7rem; }
 .scatter-tooltip strong { color: var(--text-h); font-size: 0.8rem; }
 .scatter-tooltip small { color: var(--text); }
@@ -54,8 +71,6 @@
 .reliability-key li:last-child { color: var(--text); }
 .legend-bar { display: inline-block; width: 16px; height: 9px; border-radius: 2px; }
 .legend-bar--outline { border: 2px solid; background: transparent; }
-.legend-line { display: inline-block; width: 18px; border-top: 2px solid; }
-.legend-line--dashed { border-top-style: dashed; }
 
 .heatmap { padding: 0.75rem 1rem 0.5rem; }
 .heatmap__scroll { overflow-x: auto; }
@@ -76,33 +91,13 @@
 .heatmap-selection { fill: none; stroke: transparent; stroke-width: 2; }
 .heatmap-cell:hover .heatmap-selection { stroke: var(--accent); }
 .heatmap-cell.is-selected .heatmap-selection { stroke: var(--text-h); }
+.heatmap-cell.is-linked .heatmap-selection { stroke: #e10600; stroke-width: 2.5; }
+.linked-note { flex: 1 1 100%; margin: 0; display: grid; gap: 0.25rem; color: #e10600; font-size: 0.85rem; scroll-margin-top: 1rem; }
+.linked-note p { margin: 0; }
 .heatmap-count { font: 10px var(--mono); fill: var(--text-h); pointer-events: none; }
 .heatmap-count.is-strong { fill: #fff; }
+.reliability-hint { margin: 0; padding: 0.9rem 1.25rem 1.1rem; color: var(--text); font-size: 0.78rem; line-height: 1.5; }
 .heatmap-hint { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.25rem 1rem; }
-
-.season-panel { scroll-margin-top: 1rem; }
-.season-pickers { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.season-pickers .field { min-width: 150px; }
-.season-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem 2rem; padding: 1.25rem 1.5rem 0.5rem; }
-.season-summary dd small { font-size: 0.8rem; color: var(--text); }
-.season-verdict { flex: 1 1 320px; max-width: 60ch; font-size: 0.9rem; color: var(--text-h); border-left: 3px solid var(--accent); padding-left: 0.9rem; }
-.timeline-line { fill: none; stroke-width: 2; stroke-linejoin: round; }
-.timeline-line.is-team { stroke-width: 2.5; }
-.timeline-line.is-what-if { stroke-dasharray: 5 4; opacity: 0.8; }
-.timeline-end-labels text { font: 11px var(--sans); fill: var(--text-h); }
-.timeline-failures text { font: 700 13px var(--sans); paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
-.timeline-hit { fill: transparent; }
-.timeline-crosshair { stroke: var(--text); stroke-dasharray: 2 3; }
-.season-panel .table-scroll { padding: 0 1.5rem 1.25rem; }
-
-.table-scroll { overflow-x: auto; }
-.trace-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.trace-table caption { text-align: left; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; padding-block: 0.75rem; }
-.trace-table th, .trace-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-.trace-table th:first-child, .trace-table td:nth-child(2), .trace-table td:nth-child(3) { text-align: left; }
-.trace-table thead th { font-size: 0.68rem; font-weight: 600; color: var(--text-h); }
-.trace-table td { color: var(--text-h); }
-.trace-table td:nth-child(4), .trace-table td:nth-child(5) { font-family: var(--mono); }
 
 .reading-guide--first { border-left: 0; padding-left: 0; }
 .reading-guide p + p { margin-top: 0.6rem; }
@@ -116,8 +111,6 @@
 
 @media (max-width: 700px) {
   .definitions dl { grid-template-columns: 1fr; gap: 1rem; }
-  .season-summary { padding-inline: 1rem; }
-  .season-panel .table-scroll { padding-inline: 1rem; }
   .reading-guide--first { border-top: 0; padding-top: 0; }
 }
 

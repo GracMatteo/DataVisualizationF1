@@ -13,6 +13,7 @@ test('keeps classified starts with a real grid and ignores positionOrder', () =>
   assert.deepEqual(collected.entries.map((entry) => entry.resultId), [1005, 1001, 1002, 1004]);
   assert.equal(collected.entries[1].placesGained, 0);
   assert.equal(typeof collected.entries[1].driverId, 'number');
+  assert.equal(typeof collected.entries[1].constructorId, 'number');
   assert.equal(collected.entries[1].circuitName, 'Example Park');
   assert.equal(collected.entries[1].countryKey, 'other:testland');
   assert.equal(collected.entries[1].countryLabel, 'Testland');

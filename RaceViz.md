@@ -179,6 +179,14 @@ French captions on the page:
   Every season with a start in that square is outlined in red, so a driver who appears twice
   in the square gets two outlined seasons. The number of lanes is not capped, so a busy
   square such as grid 1 to P1 gives a long timeline.
+- A constructor name opens the constructor speed × reliability page filtered on that
+  constructor: only its seasons stay in the scatter plot and the heatmap, and the season of
+  the selected start is outlined in red in both views.   The Écurie column header puts
+  every constructor of the square in that filter at once, each in its own color for comparison,
+  and outlines in red the season of each of their starts in that square.
+  That page only covers 2000–2025. A red note there names what it cannot show: an earlier
+  season of a covered constructor is not outlined, and a constructor that did not compete
+  between 2000 and 2025 stays in the filter but has no engine-failure data to show.
 
 ## Limits
 

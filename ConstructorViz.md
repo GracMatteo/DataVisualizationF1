@@ -7,7 +7,7 @@ to 2025 to answer one central question:
 
 > **Fast or reliable: what makes a champion?**
 
-Its three linked views answer six sub-questions:
+Its era cards and two linked views answer five sub-questions:
 
 | # | Question | Where it is answered |
 |---|---|---|
@@ -16,8 +16,6 @@ Its three linked views answer six sub-questions:
 | 3 | Do champions break fewer engines than the others? | Era cards and gold dots in the scatter plot |
 | 4 | Which teams were fast but fragile and probably lost a title? | Scatter plot (top-left quadrant) and the "What the data says" list |
 | 5 | How did this change across the V10, V8 and turbo-hybrid eras? | Era filter, era cards and heatmap era bands |
-| 6 | How many points did engine failures cost a team in a given season? | Season detail |
-
 **Unit of observation:** one dot or heatmap cell is one **constructor in one season**,
 for example "McLaren 2000". It aggregates both of that team's cars over the season.
 
@@ -45,16 +43,14 @@ The engine-failure statuses are:
 |---|---|
 | **DIKW** | **Data:** result rows such as "car 22, started 3rd, status *Engine*". **Information:** "McLaren 2000: average grid P2.6, 12% failures, 2nd in the championship". **Knowledge:** speed puts a team in the title fight, and among the fast teams the more reliable one wins (V10, hybrid); in the V8 era everyone was reliable. **Wisdom:** a team must be fast first, but it must not trade reliability for performance. Three titles were lost by fewer points than engine failures cost. |
 | **What / Why / How** (Munzner) | **What:** a multivariate table of constructor × season, with three quantitative attributes (grid, failure rate, wins) and one ordinal attribute (final rank), plus a temporal axis. **Why:** *discover* a **correlation** between three variables, *compare* eras, *locate* **outliers** such as Ferrari 2008, which was fast, fragile and still champion. **How:** two positional channels for the two continuous variables, color for the rank group, area for wins, a sequential intensity for the failure counts, and linked highlighting. |
-| **Shneiderman's mantra** | **1. Overview:** era cards and the speed × reliability scatter plot. **2. Zoom & filter:** the era filter and the constructor × season heatmap. **3. Details on demand:** tooltips and the season-detail line chart with its failure table. |
-| **Brushing & linking** | Hovering a constructor in the scatter plot or the heatmap dims every other team in both views. Selecting a dot or cell opens the same season in the detail view, and the selection is outlined in both overview views. |
-| **Overview + Detail** | Separate, undistorted views: the scatter plot and heatmap form the overview, and the season timeline is the detail. |
-| **Situation awareness** (Endsley) | **Perception:** where the gold dots sit. **Comprehension:** the quadrants and the champion-vs-field rates. **Projection:** the "without engine failures" line shows what would plausibly have happened. |
+| **Shneiderman's mantra** | **1. Overview:** era cards and the speed × reliability scatter plot. **2. Zoom & filter:** the era filter and the constructor × season heatmap. **3. Details on demand:** scatter tooltips and heatmap cell titles. |
+| **Brushing & linking** | Hovering a constructor in the scatter plot or the heatmap dims every other team in both views. Selecting a dot or cell outlines the same season in both views. |
+| **Situation awareness** (Endsley) | **Perception:** where the gold dots sit. **Comprehension:** the quadrants and the champion-vs-field rates. **Projection:** the "What the data says" list shows titles that engine failures plausibly cost. |
 
 A scatter plot is the standard form for relating two quantitative variables. The third
 variable, the outcome, is added through color and size rather than a second axis. The
 heatmap is the most compact way to show a count over two categorical/temporal
-dimensions (team × season). A cumulative line chart is the natural form for a
-championship that builds up race by race.
+dimensions (team × season).
 
 ## Source data
 
@@ -64,7 +60,7 @@ championship that builds up race by race.
 | `races.csv` | `raceId`; `year`, `round`, `name` |
 | `constructors.csv` | `constructorId`; `name`, `constructorRef` (team color) |
 | `status.csv` | `statusId`; `status` (engine-failure classification) |
-| `drivers.csv` | `driverId`; driver names in the failure table |
+| `drivers.csv` | Loaded by the shared loader; not displayed on this page |
 | `constructor_standings.csv` | `raceId`, `constructorId`, `position` (final rank only) |
 
 The first five files come from the shared [`loadF1Data.js`](src/lib/loadF1Data.js).
@@ -104,12 +100,11 @@ All of the logic lives in [`engineReliability.js`](src/lib/engineReliability.js)
    - Seasons with `avgGrid = null` or fewer than **10 starts** are left out of the scatter plot only, because one-off entries would sit at extreme rates by chance.
    - The era filter then keeps one era, or all of them.
 6. **Quadrants (`quadrantSplits`):** the vertical line is the **median `avgGrid`** of the visible seasons. The horizontal line is their **starts-weighted failure rate**. Both are recomputed when the era filter changes.
-7. **Season timeline (`buildSeasonTimeline`):**
+7. **Lost-title check (`buildSeasonTimeline`), used by the "What the data says" list:**
    - For one constructor-season, sum the team's points per round.
    - Do the same for the rival: the champion, or the runner-up when the team itself is champion.
-   - The "without engine failures" line adds `pointsPerFinish` at each round with a failure.
    - `gap` = rival total − team total. The `failuresExplainGap` flag is true when a non-champion's `pointsLost > gap`.
-8. **Default selection (`pickDefaultSeason`):** the runner-up whose estimated engine losses most exceed its gap to the champion. In this archive, that is McLaren 2000.
+8. **Default selection (`pickDefaultSeason`):** the season outlined when the page opens: the runner-up whose estimated engine losses most exceed its gap to the champion. In this archive, that is McLaren 2000. No default is outlined when the page is opened from the Races page.
 
 ```mermaid
 flowchart TD
@@ -122,10 +117,8 @@ flowchart TD
     G --> H[Era cards: champions vs field, r values]
     G --> I[Scatter: filter era, ≥10 starts, quadrant splits]
     G --> J[Heatmap: constructor × season]
-    G --> K[Season timeline for the selected cell or dot]
+    G --> K[Lost-title list]
     I <-->|hover / select| J
-    I -->|select| K
-    J -->|select| K
 ```
 
 ## Layout and encodings
@@ -143,13 +136,13 @@ field's. Otherwise it says engines barely separated the teams.
 | Dot | One constructor-season |
 | x position | `avgGrid`, linear, domain `[1, max avgGrid of all plottable seasons]`; faster is to the left |
 | y position | `failureRate`, linear, domain `[0, max failureRate of all plottable seasons]` |
-| Dot fill | Final-rank group: champion gold `#bb8b20`, 2nd–3rd teal `#23877d`, 4th or lower (or unknown) gray `#95929e`. These are the shared colors from [`racePresentation.js`](src/lib/racePresentation.js). |
+| Dot fill | With a constructor filter: one color per compared constructor, champion seasons edged in gold. Otherwise, final-rank group: champion gold `#bb8b20`, 2nd–3rd teal `#23877d`, 4th or lower (or unknown) gray `#95929e`. These are the shared colors from [`racePresentation.js`](src/lib/racePresentation.js). |
 | Dot area | Race wins; `sqrt` scale, domain `[0, max wins]`, radius range `[5, 18]` px |
 | Dashed lines | Quadrant splits (step 6 of the pipeline) |
 | Tinted area | The "fast but fragile" quadrant, the story's focus |
 | Corner labels | The quadrant names |
 | Dot labels | `Team ’YY` for champions when one era is selected, plus the hovered team's seasons |
-| Rings | Accent ring = hover/focus; dark ring = the season open in the detail view |
+| Rings | Accent ring = hover/focus; dark ring = the selected season; red ring = a season linked from the Races page |
 
 The axis domains do **not** change with the era filter, so a dot's position can be
 compared between eras. Only the visible dots and the quadrant lines change.
@@ -165,27 +158,13 @@ compared between eras. Only the visible dots and the quadrant lines change.
 | Gold outline | Constructors' champion that season |
 | Missing cell | The constructor did not race that season |
 | Faded columns | Seasons outside the selected era (presentation only) |
+| Name color and side bar | The constructor's comparison color, only when a constructor filter is set |
+| Dark outline | The selected season |
+| Red outline | A season linked from the Races page |
 
 By default, the heatmap shows constructors with at least 5 seasons in the period. A
 button shows all of them. Cells are at least 22 px wide, and the grid scrolls
 horizontally on narrow screens.
-
-### Season timeline ([`SeasonTimeline.jsx`](src/components/SeasonTimeline.jsx))
-
-| Channel | Encodes |
-|---|---|
-| x position | Round number; the lines start at 0 before round 1 |
-| y position | Cumulative race points; domain `[0, max of the three final totals]` |
-| Solid team-colored line | The selected team's real points |
-| Gold line (teal when the team is champion) | The rival's points |
-| Dashed team-colored line | The "without engine failures" estimate |
-| Red ✕ (✕✕ when both cars failed) | A round with an engine failure, placed on the real line |
-| End labels | Series name and final total |
-
-Hovering a round shows a crosshair and a tooltip with each line's total, the points scored
-that round, and each failure (driver, cause, estimated points). A table lists every
-failure: round, driver, cause, laps completed and estimated points lost. The verdict
-sentence states the gap and whether the estimated losses exceed it.
 
 ## Interactions
 
@@ -193,14 +172,14 @@ sentence states the gap and whether the estimated losses exceed it.
 |---|---|
 | Era buttons | Filter the scatter dots, recompute the quadrant splits, label the champions, and fade the other eras in the heatmap |
 | Hover (scatter dot or heatmap row) | Linked highlight of that constructor in both overview views |
-| Click or Enter on a dot, click a cell, or a "What the data says" entry | Open that season in the detail view and scroll to it |
-| Constructor / Season selects | Keyboard-accessible way to choose any season. Changing the constructor keeps the same year when possible. |
-| Show all constructors | Adds the part-time teams to the heatmap |
+| Click or Enter on a dot, click a cell, or a "What the data says" entry | Outline that season in both views |
+| Constructor filter | Pick one or more constructors to compare. Only their seasons stay in the scatter plot and the heatmap. Each one gets its own color, chosen from a palette without red or gold: the dot fill in the scatter plot (champion seasons keep a gold edge, and the legend lists the teams) and the name and side bar in the heatmap. A chip per constructor removes it; "Clear all" or "Clear the constructor filter" under the heatmap removes them all. The quadrant lines stay computed on every season of the era, so the dots keep their meaning. |
+| Show all constructors | Adds the part-time teams to the heatmap. Hidden while a constructor filter is set. |
+| Constructor link on the Races page | Opens this page with that constructor set as the filter, scrolls to the filters, and outlines the linked constructor-season in red in both views. The Races Écurie header puts every constructor of the square in the filter, each in its own color, and outlines in red the season of each of their starts in that square. A red note names what cannot be shown: a season outside 2000–2025 of a covered constructor is not outlined, and a constructor that did not compete between 2000 and 2025 has no engine-failure data here, so it stays in the filter (its chip reads "no 2000–2025 data") with no dot and an empty heatmap row. No default season is outlined while a filter is set. |
 
 Scatter dots are keyboard focusable. Focus shows the same tooltip as hover, and `Escape`
-hides it. Heatmap cells have native `<title>` tooltips. The keyboard alternative to the
-cells is the pair of selects. Highlight transitions and the scroll animation respect
-`prefers-reduced-motion`.
+hides it. Heatmap cells have native `<title>` tooltips; the focusable scatter dots are the
+keyboard way to select a season. Highlight transitions respect `prefers-reduced-motion`.
 
 ## Interpretation limits
 

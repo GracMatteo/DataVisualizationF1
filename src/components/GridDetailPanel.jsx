@@ -19,8 +19,9 @@ function formatRaceDate(value) {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
 }
 
-export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenDrivers }) {
+export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenDrivers, onOpenConstructors }) {
   const linked = cell.entries.filter((entry) => entry.driverId != null)
+  const linkedTeams = cell.entries.filter((entry) => entry.constructorId != null)
   const titleId = useId()
   const panelRef = useRef(null)
   const [position, setPosition] = useState(() => placePanel(index))
@@ -103,7 +104,18 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenD
                   </button>
                 ) : 'Pilote'}
               </th>
-              <th scope="col">Écurie</th>
+              <th scope="col">
+                {linkedTeams.length ? (
+                  <button
+                    type="button"
+                    className="driver-link driver-link--header"
+                    title="Afficher toutes les écuries de cette case dans la visualisation Constructeurs"
+                    onClick={() => onOpenConstructors?.(linkedTeams)}
+                  >
+                    Écurie
+                  </button>
+                ) : 'Écurie'}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -119,7 +131,14 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenD
                     </button>
                   )}
                 </td>
-                <td className="constructor-cell"><span className="legend-dot" style={{ backgroundColor: getTeamColor(entry.constructorRef) }} />{entry.constructorName}</td>
+                <td className="constructor-cell">
+                  <span className="legend-dot" style={{ backgroundColor: getTeamColor(entry.constructorRef) }} />
+                  {entry.constructorId == null ? entry.constructorName : (
+                    <button type="button" className="driver-link" onClick={() => onOpenConstructors?.([entry])}>
+                      {entry.constructorName}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

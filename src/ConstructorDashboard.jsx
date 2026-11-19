@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import LogoF1 from './assets/f1.svg?react'
 import FailureHeatmap from './components/FailureHeatmap.jsx'
-import SeasonTimeline from './components/SeasonTimeline.jsx'
 import SectionNav from './components/SectionNav.jsx'
 import SpeedReliabilityScatter from './components/SpeedReliabilityScatter.jsx'
 import { loadConstructorStandings } from './lib/loadConstructorStandings.js'
@@ -12,15 +11,22 @@ import {
 import {
   CHAMPION_COLOR, FAILURE_COLOR, QUADRANTS, RANK_GROUPS, formatPercent, formatPoints,
 } from './lib/reliabilityPresentation.js'
-import { getTeamColor } from './lib/teamColors.js'
 import './Dashboard.css'
 import './ConstructorDashboard.css'
 
 // Seasons with very few starts (one-off entries) would sit at extreme rates by chance.
 const MIN_STARTS = 10
 const MAIN_TEAM_SEASONS = 5
+const FIRST_YEAR = ERAS[0].fromYear
+const LAST_YEAR = ERAS.at(-1).toYear
+// Comparison colors avoid red and gold, which already mean "linked from Races" and "champion".
+const TEAM_PALETTE = ['#2563eb', '#16a34a', '#9333ea', '#0891b2', '#ea580c', '#db2777', '#65a30d', '#475569', '#a16207', '#4f46e5']
 
-export default function ConstructorDashboard({ onBack, onDrivers, onConstructors, onRaces, onCircuits }) {
+function listNames(names) {
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+}
+
+export default function ConstructorDashboard({ onBack, onDrivers, onConstructors, onRaces, onCircuits, constructorFocus }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
@@ -28,6 +34,9 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
   const [selectedId, setSelectedId] = useState(null)
   const [highlightedId, setHighlightedId] = useState(null)
   const [showAllTeams, setShowAllTeams] = useState(false)
+  const [teamIds, setTeamIds] = useState(() => constructorFocus?.marks?.length
+    ? [...new Set(constructorFocus.marks.map((mark) => mark.constructorId))]
+    : null)
 
   useEffect(() => {
     let active = true
@@ -42,9 +51,13 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
   const tables = data?.tables
   const rows = useMemo(() => data?.rows ?? [], [data])
   const summaries = useMemo(() => summarizeEras(rows), [rows])
+  const activeTeams = teamIds?.length ? teamIds : null
+  const coveredIds = useMemo(() => new Set(rows.map((row) => row.constructorId)), [rows])
   const plottable = useMemo(() => rows.filter((row) => row.avgGrid != null && row.starts >= MIN_STARTS), [rows])
-  const visibleRows = useMemo(() => eraId === 'all' ? plottable : plottable.filter((row) => row.eraId === eraId), [plottable, eraId])
-  const splits = useMemo(() => quadrantSplits(visibleRows), [visibleRows])
+  const eraRows = useMemo(() => eraId === 'all' ? plottable : plottable.filter((row) => row.eraId === eraId), [plottable, eraId])
+  const visibleRows = useMemo(() => activeTeams ? eraRows.filter((row) => activeTeams.includes(row.constructorId)) : eraRows, [eraRows, activeTeams])
+  // Quadrant lines describe the whole era, so a constructor filter does not move them.
+  const splits = useMemo(() => quadrantSplits(eraRows), [eraRows])
   // Domains come from every era so positions stay comparable when the era filter changes.
   const domains = useMemo(() => ({
     xMax: Math.max(2, ...plottable.map((row) => row.avgGrid)),
@@ -63,28 +76,68 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
     }
     return [...byId.values()].sort((a, b) => b.wins - a.wins || b.starts - a.starts || a.name.localeCompare(b.name))
   }, [rows])
-  const heatmapConstructors = useMemo(() => showAllTeams ? constructors : constructors.filter((item) => item.seasons >= MAIN_TEAM_SEASONS), [constructors, showAllTeams])
+
+  const marks = useMemo(() => constructorFocus?.marks ?? [], [constructorFocus])
+  const linkedIds = useMemo(() => new Set(marks.map((mark) => `${mark.constructorId}:${mark.year}`)), [marks])
+  const linkedRows = useMemo(() => rows.filter((row) => linkedIds.has(row.id)), [rows, linkedIds])
+  const linkedTeams = useMemo(() => [...new Set(marks.map((mark) => mark.constructorId))], [marks])
+  const nameById = useMemo(() => {
+    const names = new Map(marks.map((mark) => [mark.constructorId, mark.name ?? `Constructor ${mark.constructorId}`]))
+    for (const [id, constructor] of tables?.constructors ?? []) if (constructor?.name) names.set(id, constructor.name)
+    return names
+  }, [marks, tables])
+  // Linked constructors and seasons that this page cannot show, named for the red note.
+  const linkNotes = useMemo(() => {
+    const absent = new Map()
+    const outside = new Map()
+    for (const mark of marks) {
+      if (rows.some((row) => row.id === `${mark.constructorId}:${mark.year}`)) continue
+      const name = nameById.get(mark.constructorId)
+      if (coveredIds.has(mark.constructorId)) outside.set(`${mark.constructorId}:${mark.year}`, `${name} ${mark.year}`)
+      else absent.set(mark.constructorId, name)
+    }
+    return { absent: [...absent.values()], outside: [...outside.values()] }
+  }, [marks, rows, coveredIds, nameById])
+
+  const mainTeams = useMemo(() => constructors.filter((item) => item.seasons >= MAIN_TEAM_SEASONS || linkedTeams.includes(item.constructorId)), [constructors, linkedTeams])
+  // A filtered constructor with no 2000–2025 season keeps an empty heatmap row, so the filter shows it.
+  const heatmapConstructors = useMemo(() => activeTeams
+    ? activeTeams.map((id) => constructors.find((item) => item.constructorId === id) ?? { constructorId: id, name: nameById.get(id) ?? `Constructor ${id}`, seasons: 0, wins: 0, starts: 0 })
+    : showAllTeams ? constructors : mainTeams, [constructors, mainTeams, showAllTeams, activeTeams, nameById])
+  const teamColors = useMemo(() => activeTeams ? new Map(activeTeams.map((id, index) => [id, TEAM_PALETTE[index % TEAM_PALETTE.length]])) : null, [activeTeams])
+  const addableTeams = useMemo(() => constructors.filter((item) => !activeTeams?.includes(item.constructorId))
+    .sort((a, b) => a.name.localeCompare(b.name)), [constructors, activeTeams])
+  const missingLinked = linkedTeams.filter((id) => !activeTeams?.includes(id))
+  const filterLabel = !activeTeams ? 'All constructors'
+    : activeTeams.length === 1 ? nameById.get(activeTeams[0])
+      : linkedTeams.length && !missingLinked.length && activeTeams.length === linkedTeams.length ? `Constructors from Races (${activeTeams.length})`
+        : `${activeTeams.length} constructors compared`
 
   const defaultSeason = useMemo(() => tables ? pickDefaultSeason(tables, rows) : null, [tables, rows])
-  const selected = rows.find((row) => row.id === selectedId) ?? defaultSeason
-  const timeline = useMemo(() => tables && selected ? buildSeasonTimeline(tables, rows, selected.constructorId, selected.year) : null, [tables, rows, selected])
+  const selected = rows.find((row) => row.id === selectedId) ?? linkedRows[0] ?? (marks.length || activeTeams ? null : defaultSeason)
   const lostTitles = useMemo(() => tables ? rows
     .filter((row) => !row.isChampion && row.finalPosition != null && row.finalPosition <= 3 && row.failures > 0)
     .map((row) => buildSeasonTimeline(tables, rows, row.constructorId, row.year))
     .filter((item) => item?.failuresExplainGap) : [], [tables, rows])
   const fastFragile = visibleRows.filter((row) => getQuadrant(row, splits) === 'fastFragile')
-  const constructorSeasons = selected ? rows.filter((row) => row.constructorId === selected.constructorId) : []
+
+  useEffect(() => {
+    if (!data || !marks.length) return
+    document.getElementById('constructor-filters')?.scrollIntoView({ behavior: 'auto', block: 'start' })
+  }, [data, marks])
 
   const onHover = useCallback((id) => setHighlightedId(id), [])
-  const onSelect = useCallback((id) => {
-    setSelectedId(id)
-    document.getElementById('season-detail')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
-  }, [])
+  const onSelect = useCallback((id) => setSelectedId(id), [])
 
-  function selectConstructor(constructorId) {
-    const seasons = rows.filter((row) => row.constructorId === constructorId)
-    const sameYear = seasons.find((row) => row.year === selected?.year)
-    setSelectedId((sameYear ?? seasons.at(-1))?.id ?? null)
+  function addTeams(value) {
+    if (value === 'all') return setTeamIds(null)
+    const added = value === 'linked' ? missingLinked : [Number(value)]
+    setTeamIds([...(activeTeams ?? []), ...added])
+  }
+
+  function removeTeam(id) {
+    const remaining = activeTeams.filter((teamId) => teamId !== id)
+    setTeamIds(remaining.length ? remaining : null)
   }
 
   return (
@@ -114,7 +167,7 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
       ) : !data ? (
         <div className="empty-state" role="status"><span className="loading-dot" />Loading results, statuses and championship standings…</div>
       ) : !plottable.length ? (
-        <div className="empty-state" role="status">No constructor results between {ERAS[0].fromYear} and {ERAS.at(-1).toYear} are available in this dataset.</div>
+        <div className="empty-state" role="status">No constructor results between {FIRST_YEAR} and {LAST_YEAR} are available in this dataset.</div>
       ) : (
         <>
           <section className="definitions" aria-labelledby="definitions-title">
@@ -146,7 +199,7 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
             ))}
           </section>
 
-          <section className="explorer-filters" aria-label="Era filter">
+          <section className="explorer-filters" id="constructor-filters" aria-label="Era and constructor filters">
             <div className="field">
               <span>Engine era</span>
               <div className="button-group era-tabs" role="group" aria-label="Engine era">
@@ -155,26 +208,73 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
                 ))}
               </div>
             </div>
-            <p className="filters-note">The era filter changes the visible dots and the quadrant lines; the axes stay fixed so eras can be compared.</p>
+            <div className="field team-filter">
+              <label htmlFor="team-filter-add">Constructors</label>
+              <select id="team-filter-add" value="" onChange={(event) => addTeams(event.target.value)}>
+                <option value="" disabled>{filterLabel}</option>
+                {activeTeams && <option value="all">All constructors (clear the filter)</option>}
+                {missingLinked.length > 1 && <option value="linked">Add the constructors from Races ({missingLinked.length})</option>}
+                <optgroup label={activeTeams ? 'Add to the comparison' : 'Filter on'}>
+                  {addableTeams.map((item) => <option key={item.constructorId} value={item.constructorId}>{item.name}</option>)}
+                </optgroup>
+              </select>
+              {activeTeams && (
+                <ul className="team-chips" aria-label="Compared constructors">
+                  {activeTeams.map((id) => (
+                    <li key={id} style={{ '--team': teamColors.get(id) }}>
+                      <span className="team-chips__swatch" aria-hidden="true" />{nameById.get(id)}
+                      {!coveredIds.has(id) && <small className="team-chips__empty">no {FIRST_YEAR}–{LAST_YEAR} data</small>}
+                      <button type="button" onClick={() => removeTeam(id)} aria-label={`Remove ${nameById.get(id)} from the comparison`}>×</button>
+                    </li>
+                  ))}
+                  <li className="team-chips__clear"><button type="button" className="text-button" onClick={() => setTeamIds(null)}>Clear all</button></li>
+                </ul>
+              )}
+            </div>
+            <p className="filters-note">The era filter changes the visible dots and the quadrant lines. The constructor filter keeps only the chosen teams’ seasons in the scatter plot and the heatmap, each team in its own color, and leaves the quadrant lines on the whole era. The axes stay fixed so views can be compared.</p>
+            {marks.length > 0 && (
+              <div className="linked-note" role="status">
+                {linkedRows.length > 0 && (
+                  <p>Opened from Races: {linkedRows.length} constructor-season{linkedRows.length === 1 ? '' : 's'} outlined in red.</p>
+                )}
+                {linkNotes.outside.length > 0 && (
+                  <p>
+                    {listNames(linkNotes.outside)} {linkNotes.outside.length === 1 ? 'falls' : 'fall'} outside {FIRST_YEAR}–{LAST_YEAR}, the period covered by this page, so {linkNotes.outside.length === 1 ? 'it is' : 'they are'} not outlined.
+                    The filter still shows that constructor’s seasons from {FIRST_YEAR} to {LAST_YEAR}.
+                  </p>
+                )}
+                {linkNotes.absent.length > 0 && (
+                  <p>
+                    {listNames(linkNotes.absent)} did not compete between {FIRST_YEAR} and {LAST_YEAR}.
+                    This page has no engine-failure data for {linkNotes.absent.length === 1 ? 'this constructor: it stays in the filter with no dot in the scatter plot and an empty heatmap row.' : 'these constructors: they stay in the filter with no dot in the scatter plot and an empty heatmap row.'}
+                  </p>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="chart-panel" aria-labelledby="scatter-heading">
             <div className="chart-panel__header">
               <div><p className="eyebrow">1 · Overview</p><h2 id="scatter-heading">Is the champion the fastest, the most reliable, or both?</h2></div>
               <ul className="tree-legend reliability-key" aria-label="Dot colors">
-                {RANK_GROUPS.map((group) => <li key={group.key}><span className="legend-dot" style={{ backgroundColor: group.color }} />{group.label}</li>)}
+                {teamColors ? (
+                  <>
+                    {activeTeams.map((id) => <li key={id}><span className="legend-dot" style={{ backgroundColor: teamColors.get(id) }} />{nameById.get(id)}</li>)}
+                    <li><span className="legend-dot legend-dot--champion" style={{ borderColor: CHAMPION_COLOR }} />Champion season</li>
+                  </>
+                ) : RANK_GROUPS.map((group) => <li key={group.key}><span className="legend-dot" style={{ backgroundColor: group.color }} />{group.label}</li>)}
                 <li>Dot size = race wins</li>
               </ul>
             </div>
-            <SpeedReliabilityScatter rows={visibleRows} splits={splits} {...domains} labelChampions={eraId !== 'all'}
+            <SpeedReliabilityScatter rows={visibleRows} splits={splits} {...domains} labelChampions={eraId !== 'all'} linkedIds={linkedIds} teamColors={teamColors}
               highlightedId={highlightedId} selectedId={selected?.id} onHover={onHover} onSelect={onSelect} />
-            <p className="tree-hint">
-              Dashed lines: median starting position ({splits ? `P${splits.grid.toFixed(1)}` : 'n/a'}) and average failure rate ({formatPercent(splits?.failureRate)}) of the visible seasons.
-              {' '}{fastFragile.length} seasons are “{QUADRANTS.fastFragile.label.toLowerCase()}”. Hover a dot to follow the team everywhere · click or press Enter for the season detail.
+            <p className="tree-hint reliability-hint">
+              Dashed lines: median starting position ({splits ? `P${splits.grid.toFixed(1)}` : 'n/a'}) and average failure rate ({formatPercent(splits?.failureRate)}) of every season in the selected era.
+              {' '}{fastFragile.length} seasons are “{QUADRANTS.fastFragile.label.toLowerCase()}”. Hover a dot to follow the team everywhere · click or press Enter to mark that season in both views.
             </p>
           </section>
 
-          <section className="chart-panel heatmap-panel" aria-labelledby="heatmap-heading">
+          <section className="chart-panel heatmap-panel" id="failure-heatmap" aria-labelledby="heatmap-heading">
             <div className="chart-panel__header">
               <div><p className="eyebrow">2 · Zoom & filter</p><h2 id="heatmap-heading">How many engines did each team break, season by season?</h2></div>
               <ul className="tree-legend reliability-key" aria-label="Grid key">
@@ -182,81 +282,19 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
                 <li><span className="legend-bar legend-bar--outline" style={{ borderColor: CHAMPION_COLOR }} />Constructors’ champion</li>
               </ul>
             </div>
-            <FailureHeatmap rows={rows} constructors={heatmapConstructors} eraId={eraId}
+            <FailureHeatmap rows={rows} constructors={heatmapConstructors} eraId={eraId} linkedIds={linkedIds} teamColors={teamColors}
               highlightedId={highlightedId} selectedId={selected?.id} onHover={onHover} onSelect={onSelect} />
-            <div className="tree-hint heatmap-hint">
-              <span>Numbers are engine failures in that season. Empty space: the team did not race. Click a cell for its season detail.</span>
-              <button type="button" className="text-button" onClick={() => setShowAllTeams((value) => !value)}>
-                {showAllTeams ? `Show the ${constructors.filter((item) => item.seasons >= MAIN_TEAM_SEASONS).length} main teams only` : `Show all ${constructors.length} constructors`}
-              </button>
+            <div className="tree-hint reliability-hint heatmap-hint">
+              <span>Numbers are engine failures in that season. Empty space: the team did not race. Click a cell to mark that season in both views.</span>
+              {activeTeams ? (
+                <button type="button" className="text-button" onClick={() => setTeamIds(null)}>Clear the constructor filter</button>
+              ) : (
+                <button type="button" className="text-button" onClick={() => setShowAllTeams((value) => !value)}>
+                  {showAllTeams ? `Show the ${mainTeams.length} main teams only` : `Show all ${constructors.length} constructors`}
+                </button>
+              )}
             </div>
           </section>
-
-          {timeline && (
-            <section className="chart-panel season-panel" id="season-detail" aria-labelledby="season-heading">
-              <div className="chart-panel__header">
-                <div>
-                  <p className="eyebrow">3 · Details on demand</p>
-                  <h2 id="season-heading">Did engine failures cost {timeline.row.name} the {timeline.row.year} title?</h2>
-                </div>
-                <div className="season-pickers">
-                  <label className="field">
-                    <span>Constructor</span>
-                    <select value={timeline.row.constructorId} onChange={(event) => selectConstructor(Number(event.target.value))}>
-                      {[...constructors].sort((a, b) => a.name.localeCompare(b.name)).map((item) => <option key={item.constructorId} value={item.constructorId}>{item.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Season</span>
-                    <select value={timeline.row.id} onChange={(event) => setSelectedId(event.target.value)}>
-                      {constructorSeasons.map((row) => <option key={row.id} value={row.id}>{row.year}</option>)}
-                    </select>
-                  </label>
-                </div>
-              </div>
-              <div className="season-summary">
-                <dl className="driver-stats">
-                  <div><dt>Average grid</dt><dd>{timeline.row.avgGrid ? `P${timeline.row.avgGrid.toFixed(1)}` : 'n/a'}</dd></div>
-                  <div><dt>Engine failures</dt><dd>{timeline.row.failures}<small> / {timeline.row.starts}</small></dd></div>
-                  <div><dt>Wins</dt><dd>{timeline.row.wins}</dd></div>
-                  <div><dt>Championship</dt><dd>{timeline.row.finalPosition ? `P${timeline.row.finalPosition}` : 'n/a'}</dd></div>
-                  <div><dt>≈ Points lost</dt><dd>{formatPoints(timeline.row.pointsLost)}</dd></div>
-                </dl>
-                <p className="season-verdict">
-                  {!timeline.rival ? 'No rival found in the final standings for this season.'
-                    : timeline.row.isChampion
-                      ? `Champion${timeline.row.failures ? ` despite ${timeline.row.failures} engine failure${timeline.row.failures > 1 ? 's' : ''}` : ' with no engine failure'}: ${formatPoints(-timeline.gap)} race points ahead of ${timeline.rival.name}.`
-                      : timeline.failuresExplainGap
-                        ? `Finished ${formatPoints(timeline.gap)} race points behind ${timeline.rival.name}, but its engine failures cost about ${formatPoints(timeline.row.pointsLost)}. Engines alone can explain the lost title.`
-                        : `Finished ${formatPoints(timeline.gap)} race points behind ${timeline.rival.name}. Engine failures cost about ${formatPoints(timeline.row.pointsLost)}, so they do not explain the gap on their own.`}
-                </p>
-              </div>
-              <SeasonTimeline timeline={timeline} />
-              <ul className="tree-legend" aria-label="Line key">
-                <li><span className="legend-line" style={{ borderColor: getTeamColor(timeline.row.constructorRef) }} />{timeline.row.name}</li>
-                {timeline.rival && <li><span className="legend-line" style={{ borderColor: timeline.row.isChampion ? RANK_GROUPS[1].color : CHAMPION_COLOR }} />{timeline.rival.name} ({timeline.row.isChampion ? 'runner-up' : 'champion'})</li>}
-                {timeline.row.failures > 0 && <li><span className="legend-line legend-line--dashed" style={{ borderColor: getTeamColor(timeline.row.constructorRef) }} />Without engine failures (estimate)</li>}
-                {timeline.row.failures > 0 && <li><span style={{ color: FAILURE_COLOR }} aria-hidden="true">✕</span>Engine failure</li>}
-              </ul>
-              {timeline.row.failures > 0 && (
-                <div className="table-scroll">
-                  <table className="trace-table">
-                    <caption>Engine failures in {timeline.row.year}</caption>
-                    <thead><tr><th scope="col">Round</th><th scope="col">Driver</th><th scope="col">Cause</th><th scope="col">Laps done</th><th scope="col">≈ Points lost</th></tr></thead>
-                    <tbody>
-                      {timeline.rounds.flatMap((round) => round.failures.map((failure) => (
-                        <tr key={failure.resultId}>
-                          <th scope="row">R{round.round} {round.raceName.replace('Grand Prix', 'GP')}</th>
-                          <td>{failure.driver}</td><td>{failure.status}</td><td>{failure.laps ?? '—'}</td>
-                          <td>{formatPoints(timeline.row.pointsPerFinish)}</td>
-                        </tr>
-                      )))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          )}
 
           <div className="explorer-notes">
             <aside className="reading-guide reading-guide--first" aria-labelledby="findings-title">
@@ -282,8 +320,8 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
             </aside>
           </div>
           <footer className="dashboard-footer">
-            <span>Local F1 archive · {ERAS[0].fromYear}–{ERAS.at(-1).toYear} · {rows.length} constructor-seasons</span>
-            <span>D3.js scatter plot + heatmap + line chart, linked / No external data service</span>
+            <span>Local F1 archive · {FIRST_YEAR}–{LAST_YEAR} · {rows.length} constructor-seasons</span>
+            <span>D3.js scatter plot + heatmap, linked / No external data service</span>
           </footer>
         </>
       )}

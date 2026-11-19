@@ -18,6 +18,7 @@ const PAGES = {
 function App() {
   const [section, setSection] = useState(null)
   const [driverFocus, setDriverFocus] = useState(null)
+  const [constructorFocus, setConstructorFocus] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
     onHome: () => setSection(null),
@@ -29,7 +30,13 @@ function App() {
       } : null)
       setSection('drivers')
     },
-    onConstructors: () => setSection('constructors'),
+    onConstructors: (marks) => {
+      const list = Array.isArray(marks) ? marks.filter((mark) => mark?.constructorId != null) : []
+      setConstructorFocus(list.length ? {
+        marks: list.map((mark) => ({ constructorId: mark.constructorId, name: mark.name ?? null, year: mark.year ?? null })),
+      } : null)
+      setSection('constructors')
+    },
     onRaces: () => setSection('races'),
     onCircuits: () => setSection('circuits'),
   }
@@ -38,7 +45,11 @@ function App() {
     const { Page, label } = PAGES[section]
     return (
       <Suspense fallback={<main className="page-status" role="status">Opening the {label} explorer…</main>}>
-        <Page {...navigation} {...(section === 'drivers' ? { driverFocus } : {})} />
+        <Page
+          {...navigation}
+          {...(section === 'drivers' ? { driverFocus } : {})}
+          {...(section === 'constructors' ? { constructorFocus } : {})}
+        />
       </Suspense>
     )
   }
