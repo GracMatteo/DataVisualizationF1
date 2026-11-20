@@ -117,3 +117,9 @@
 @media (prefers-reduced-motion: reduce) {
   .scatter-dot, .heatmap-row { transition: none; }
 }
+
+/* Commentary under the failure matrix: which constructors it leaves out, and why. */
+.heatmap-hidden { display: grid; gap: 0.5rem; padding: 0.9rem 1.25rem 1.1rem; border-top: 1px solid var(--border); font-size: 0.78rem; line-height: 1.55; }
+.heatmap-hidden .eyebrow { margin: 0; }
+.heatmap-hidden summary { color: var(--text-h); cursor: pointer; min-height: 24px; }
+.heatmap-hidden details p { margin: 0.35rem 0 0; max-width: 110ch; color: var(--text); }

@@ -100,10 +100,22 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
   }, [marks, rows, coveredIds, nameById])
 
   const mainTeams = useMemo(() => constructors.filter((item) => item.seasons >= MAIN_TEAM_SEASONS || linkedTeams.includes(item.constructorId)), [constructors, linkedTeams])
-  // A filtered constructor with no 2000–2025 season keeps an empty heatmap row, so the filter shows it.
+  // A filtered constructor with no 2000–2025 season gets no heatmap row; the red note names it instead.
   const heatmapConstructors = useMemo(() => activeTeams
-    ? activeTeams.map((id) => constructors.find((item) => item.constructorId === id) ?? { constructorId: id, name: nameById.get(id) ?? `Constructor ${id}`, seasons: 0, wins: 0, starts: 0 })
-    : showAllTeams ? constructors : mainTeams, [constructors, mainTeams, showAllTeams, activeTeams, nameById])
+    ? activeTeams.map((id) => constructors.find((item) => item.constructorId === id)).filter(Boolean)
+    : showAllTeams ? constructors : mainTeams, [constructors, mainTeams, showAllTeams, activeTeams])
+  // Constructors the matrix leaves out, named under it: smaller teams in the default view, and any without a season in the covered years.
+  const hiddenTeams = useMemo(() => {
+    const shown = new Set(heatmapConstructors.map((item) => item.constructorId))
+    const minor = activeTeams ? [] : constructors.filter((item) => !shown.has(item.constructorId))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((item) => `${item.name} (${item.seasons} season${item.seasons === 1 ? '' : 's'})`)
+    const noDataIds = activeTeams
+      ? activeTeams.filter((id) => !coveredIds.has(id))
+      : [...(tables?.constructors?.keys() ?? [])].filter((id) => !coveredIds.has(id))
+    const noData = noDataIds.map((id) => nameById.get(id) ?? `Constructor ${id}`).sort((a, b) => a.localeCompare(b))
+    return { minor, noData }
+  }, [heatmapConstructors, activeTeams, constructors, coveredIds, tables, nameById])
   const teamColors = useMemo(() => activeTeams ? new Map(activeTeams.map((id, index) => [id, TEAM_PALETTE[index % TEAM_PALETTE.length]])) : null, [activeTeams])
   const addableTeams = useMemo(() => constructors.filter((item) => !activeTeams?.includes(item.constructorId))
     .sort((a, b) => a.name.localeCompare(b.name)), [constructors, activeTeams])
@@ -246,7 +258,7 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
                 {linkNotes.absent.length > 0 && (
                   <p>
                     {listNames(linkNotes.absent)} did not compete between {FIRST_YEAR} and {LAST_YEAR}.
-                    This page has no engine-failure data for {linkNotes.absent.length === 1 ? 'this constructor: it stays in the filter with no dot in the scatter plot and an empty heatmap row.' : 'these constructors: they stay in the filter with no dot in the scatter plot and an empty heatmap row.'}
+                    This page has no engine-failure data for {linkNotes.absent.length === 1 ? 'this constructor: it stays in the filter but has no dot in the scatter plot and no heatmap row.' : 'these constructors: they stay in the filter but have no dot in the scatter plot and no heatmap row.'}
                   </p>
                 )}
               </div>
@@ -282,8 +294,15 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
                 <li><span className="legend-bar legend-bar--outline" style={{ borderColor: CHAMPION_COLOR }} />Constructors’ champion</li>
               </ul>
             </div>
-            <FailureHeatmap rows={rows} constructors={heatmapConstructors} eraId={eraId} linkedIds={linkedIds} teamColors={teamColors}
-              highlightedId={highlightedId} selectedId={selected?.id} onHover={onHover} onSelect={onSelect} />
+            {heatmapConstructors.length ? (
+              <FailureHeatmap rows={rows} constructors={heatmapConstructors} eraId={eraId} linkedIds={linkedIds} teamColors={teamColors}
+                highlightedId={highlightedId} selectedId={selected?.id} onHover={onHover} onSelect={onSelect} />
+            ) : (
+              <div className="empty-state" role="status">
+                <h3>No engine-failure data for these constructors.</h3>
+                <p>None of the filtered constructors raced between {FIRST_YEAR} and {LAST_YEAR}.</p>
+              </div>
+            )}
             <div className="tree-hint reliability-hint heatmap-hint">
               <span>Numbers are engine failures in that season. Empty space: the team did not race. Click a cell to mark that season in both views.</span>
               {activeTeams ? (
@@ -294,6 +313,23 @@ export default function ConstructorDashboard({ onBack, onDrivers, onConstructors
                 </button>
               )}
             </div>
+            {(hiddenTeams.minor.length > 0 || hiddenTeams.noData.length > 0) && (
+              <div className="heatmap-hidden" aria-label="Constructors not shown in the matrix">
+                <p className="eyebrow">Not shown in the matrix</p>
+                {hiddenTeams.minor.length > 0 && (
+                  <details open={hiddenTeams.minor.length <= 12}>
+                    <summary>{hiddenTeams.minor.length} smaller {hiddenTeams.minor.length === 1 ? 'team' : 'teams'} with fewer than {MAIN_TEAM_SEASONS} seasons between {FIRST_YEAR} and {LAST_YEAR}. Use “Show all constructors” to add them.</summary>
+                    <p>{hiddenTeams.minor.join(', ')}.</p>
+                  </details>
+                )}
+                {hiddenTeams.noData.length > 0 && (
+                  <details open={hiddenTeams.noData.length <= 12}>
+                    <summary>{hiddenTeams.noData.length} {activeTeams ? 'filtered ' : ''}{hiddenTeams.noData.length === 1 ? 'constructor' : 'constructors'} with no season between {FIRST_YEAR} and {LAST_YEAR}, so no engine-failure data.</summary>
+                    <p>{hiddenTeams.noData.join(', ')}.</p>
+                  </details>
+                )}
+              </div>
+            )}
           </section>
 
           <div className="explorer-notes">
