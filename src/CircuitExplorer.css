@@ -2,6 +2,8 @@
 
 .circuit-filters .season-filters { flex: 2 1 420px; }
 .circuit-filters__country, .circuit-filters__team { flex: 1 1 200px; }
+.linked-set { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; margin: 0; font-size: 0.8rem; color: var(--text-h); }
+.linked-set small { color: var(--text); }
 .play-button {
   height: 44px;
   flex-shrink: 0;
@@ -148,6 +150,20 @@ button.season-cell { cursor: default; }
 .season-cell--no-winner { background: repeating-linear-gradient(45deg, var(--border) 0 3px, transparent 3px 6px); border: 1px solid var(--border); }
 .season-cell--outside { visibility: hidden; }
 .season-cell.is-active, .season-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.season-cell.is-pinned { outline: 2px solid var(--text-h); outline-offset: 1px; }
+button.season-cell[aria-pressed] { cursor: pointer; }
+.circuit-link { padding: 0; border: 0; background: none; color: var(--text-h); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 0.18em; }
+.circuit-link:hover { color: var(--accent); }
+.circuit-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.circuit-link:disabled { color: var(--text); text-decoration: none; cursor: default; }
+.circuit-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.9rem; margin: 0.25rem 0 0.75rem; font-size: 0.75rem; }
+.season-pick { display: grid; justify-items: start; gap: 0.5rem; padding: 0.7rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.75rem; color: var(--text-h); }
+.season-pick__head { display: flex; justify-content: space-between; align-items: baseline; justify-self: stretch; }
+.season-pick__head strong { font-family: var(--mono); }
+.season-pick ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.season-pick li { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+.season-pick__race { color: var(--text); }
+.season-pick__winner { display: inline-flex; align-items: center; gap: 0.35rem; }
 .season-history__readout { min-height: 2.6em; font-size: 0.75rem; color: var(--text-h); line-height: 1.4; }
 .season-history__key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.68rem; }
 .season-history__key li { display: flex; align-items: center; gap: 0.4rem; }

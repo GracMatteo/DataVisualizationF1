@@ -19,6 +19,8 @@ function App() {
   const [section, setSection] = useState(null)
   const [driverFocus, setDriverFocus] = useState(null)
   const [constructorFocus, setConstructorFocus] = useState(null)
+  const [raceFocus, setRaceFocus] = useState(null)
+  const [circuitFocus, setCircuitFocus] = useState(null)
   const navigation = {
     onBack: () => setSection(null),
     onHome: () => setSection(null),
@@ -37,8 +39,25 @@ function App() {
       } : null)
       setSection('constructors')
     },
-    onRaces: () => setSection('races'),
-    onCircuits: () => setSection('circuits'),
+    // A focus is { circuitId, fromYear, toYear }; a plain nav click (an event) clears it.
+    onRaces: (focus) => {
+      setRaceFocus(focus?.circuitId != null ? {
+        circuitId: focus.circuitId, fromYear: focus.fromYear ?? null, toYear: focus.toYear ?? null,
+      } : null)
+      setSection('races')
+    },
+    // A focus is { circuitId | circuitIds, country | countries, fromYear, toYear };
+    // a plain nav click (an event) clears it.
+    onCircuits: (focus) => {
+      const circuitId = focus?.circuitId ?? null
+      const country = typeof focus?.country === 'string' ? focus.country : null
+      const circuitIds = Array.isArray(focus?.circuitIds) && focus.circuitIds.length ? focus.circuitIds : null
+      const countries = Array.isArray(focus?.countries) && focus.countries.length ? focus.countries : null
+      setCircuitFocus(circuitId != null || country || circuitIds || countries ? {
+        circuitId, country, circuitIds, countries, fromYear: focus.fromYear ?? null, toYear: focus.toYear ?? null,
+      } : null)
+      setSection('circuits')
+    },
   }
 
   if (section) {
@@ -49,6 +68,8 @@ function App() {
           {...navigation}
           {...(section === 'drivers' ? { driverFocus } : {})}
           {...(section === 'constructors' ? { constructorFocus } : {})}
+          {...(section === 'races' ? { raceFocus } : {})}
+          {...(section === 'circuits' ? { circuitFocus } : {})}
         />
       </Suspense>
     )

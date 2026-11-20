@@ -5,7 +5,7 @@ import { csvParse } from 'd3'
 import { indexF1Data } from '../src/lib/loadF1Data.js'
 import { indexCircuits } from '../src/lib/loadCircuits.js'
 import {
-  buildRaceWinners, circuitLeaderboard, circuitSpans, decadeRows, filterRaces, seasonTimeline, summarizeCircuits, winsFor,
+  buildRaceWinners, circuitFocusFor, circuitLeaderboard, circuitSpans, decadeRows, filterRaces, seasonTimeline, summarizeCircuits, winnerMarks, winsFor,
 } from '../src/lib/circuitWins.js'
 import { MARKER_RADIUS, buildCircuitMarkers, createMarkerRadius, winShares } from '../src/lib/circuitMarkers.js'
 import { getTeamColor } from '../src/lib/teamColors.js'
@@ -63,12 +63,49 @@ test('race winners use classified position 1, ignore unraced schedule entries an
   assert.ok(!raceWinners.some((r) => r.raceId === 8), 'a race without results is not a Grand Prix held')
 })
 
+test('race winners keep the distinct winning driver and constructor pairs', () => {
+  const { raceWinners } = fixture()
+  assert.deepEqual(raceWinners.find((r) => r.raceId === 1).winners, [{ driverId: 1, constructorId: 10 }])
+  assert.deepEqual(raceWinners.find((r) => r.raceId === 6).winners, [], 'no classified P1, no winning driver')
+  assert.deepEqual(raceWinners.find((r) => r.raceId === 7).winners, [{ driverId: 1, constructorId: 10 }, { driverId: 1, constructorId: 20 }])
+})
+
+test('winner marks deduplicate driver and constructor seasons for navigation', () => {
+  const { raceWinners } = fixture()
+  const marks = winnerMarks(raceWinners.filter((r) => [1, 4, 6, 7].includes(r.raceId)))
+  assert.deepEqual(marks.drivers, [{ driverId: 1, year: 2000 }, { driverId: 1, year: 2003 }])
+  assert.deepEqual(marks.constructors, [{ constructorId: 10, year: 2000 }, { constructorId: 10, year: 2003 }, { constructorId: 20, year: 2003 }])
+  assert.deepEqual(winnerMarks([]), { drivers: [], constructors: [] })
+})
+
 test('season and country filters are inclusive and reject reversed ranges', () => {
   const { raceWinners, circuits } = fixture()
   assert.deepEqual(filterRaces(raceWinners, circuits, { fromYear: 2001, toYear: 2002 }).map((r) => r.raceId), [2, 5, 3])
   assert.deepEqual(filterRaces(raceWinners, circuits, { country: 'Italy' }).map((r) => r.raceId), [4, 5, 6])
   assert.deepEqual(filterRaces(raceWinners, circuits, { fromYear: 2003, toYear: 2000 }), [])
   assert.equal(filterRaces(raceWinners, circuits).length, raceWinners.length)
+})
+
+test('circuit and country selections from another view restrict the races', () => {
+  const { raceWinners, circuits } = fixture()
+  assert.deepEqual(filterRaces(raceWinners, circuits, { circuitIds: [2, 4] }).map((r) => r.raceId), [4, 5, 7])
+  assert.deepEqual(filterRaces(raceWinners, circuits, { countries: ['France', 'Spain'] }).map((r) => r.raceId), [1, 2, 3, 7])
+  assert.deepEqual(filterRaces(raceWinners, circuits, { countries: ['Italy'], circuitIds: [3], fromYear: 2003 }).map((r) => r.raceId), [6])
+  assert.deepEqual(filterRaces(raceWinners, circuits, { circuitIds: [] }), [])
+})
+
+test('a list of race entries becomes a Circuits focus by circuit or by country', () => {
+  const entries = [
+    { circuitId: 1, country: 'France', year: 2001 },
+    { circuitId: 2, country: 'Italy', year: 1998 },
+    { circuitId: 2, country: 'Italy', year: 2004 },
+    { circuitId: null, country: null, year: 1950 },
+  ]
+  assert.deepEqual(circuitFocusFor(entries, 'circuit'), { circuitIds: [1, 2], fromYear: 1998, toYear: 2004 })
+  assert.deepEqual(circuitFocusFor(entries, 'country'), { countries: ['France', 'Italy'], fromYear: 1998, toYear: 2004 })
+  assert.deepEqual(circuitFocusFor(entries.slice(1, 3), 'circuit'), { circuitId: 2, fromYear: 1998, toYear: 2004 })
+  assert.deepEqual(circuitFocusFor(entries.slice(1, 2), 'country'), { country: 'Italy', fromYear: 1998, toYear: 1998 })
+  assert.equal(circuitFocusFor(entries.slice(3), 'circuit'), null)
 })
 
 test('circuit summaries rank constructors and expose outright leaders and ties', () => {

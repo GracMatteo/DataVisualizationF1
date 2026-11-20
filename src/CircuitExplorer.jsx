@@ -13,18 +13,25 @@ import './CircuitExplorer.css'
 
 const PLAY_INTERVAL_MS = 1200
 const parseYear = (value) => (value === '' ? null : Number(value))
+const focusValue = (value) => (value == null ? '' : String(value))
 
-export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onRaces, onCircuits }) {
+export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onRaces, onCircuits, circuitFocus }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
-  const [fromYear, setFromYear] = useState('')
-  const [lastYear, setLastYear] = useState('')
-  const [country, setCountry] = useState('')
+  // Opening from another view (Races) can preset the seasons, the country and a circuit.
+  const [fromYear, setFromYear] = useState(() => focusValue(circuitFocus?.fromYear))
+  const [lastYear, setLastYear] = useState(() => focusValue(circuitFocus?.toYear))
+  const [country, setCountry] = useState(() => circuitFocus?.country ?? '')
   const [highlightId, setHighlightId] = useState(null)
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, setSelectedId] = useState(() => circuitFocus?.circuitId ?? null)
+  // Several circuits or countries sent from Races restrict the map until cleared.
+  const [linkedSet, setLinkedSet] = useState(() => (circuitFocus?.circuitIds
+    ? { kind: 'circuits', values: circuitFocus.circuitIds }
+    : circuitFocus?.countries ? { kind: 'countries', values: circuitFocus.countries } : null))
   const [playing, setPlaying] = useState(false)
-  const [display, setDisplay] = useState('dots')
+  // Pies are the default; a single-season range still falls back to dots (see pieAvailable).
+  const [display, setDisplay] = useState('pie')
 
   useEffect(() => {
     let active = true
@@ -73,7 +80,9 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onR
   const reversedRange = fromYear !== '' && lastYear !== '' && Number(fromYear) > Number(lastYear)
   const summaries = useMemo(() => (data ? summarizeCircuits(filterRaces(data.raceWinners, data.circuits, {
     fromYear: parseYear(fromYear), toYear: parseYear(lastYear), country: country || null,
-  })) : new Map()), [data, fromYear, lastYear, country])
+    circuitIds: linkedSet?.kind === 'circuits' ? linkedSet.values : null,
+    countries: linkedSet?.kind === 'countries' ? linkedSet.values : null,
+  })) : new Map()), [data, fromYear, lastYear, country, linkedSet])
   const board = useMemo(() => circuitLeaderboard(summaries), [summaries])
   const seasonCount = useMemo(
     () => new Set([...summaries.values()].flatMap((summary) => summary.races.map((race) => race.year))).size,
@@ -96,7 +105,9 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onR
   const highlightWins = highlightId === null ? 0 : markers.filter((marker) => marker.kind === 'leader').length
   const rangeLabel = !data ? '' : reversedRange ? 'Invalid season range'
     : `${fromYear || data.tables.yearRange.fromYear}–${lastYear || data.tables.yearRange.toYear}${country ? ` · ${country}` : ''}`
-  const filtered = fromYear !== '' || lastYear !== '' || country !== '' || highlightId !== null
+  const filtered = fromYear !== '' || lastYear !== '' || country !== '' || highlightId !== null || linkedSet !== null
+  const linkedNames = !linkedSet || !data ? [] : linkedSet.kind === 'countries' ? linkedSet.values
+    : linkedSet.values.map((id) => data.circuits.get(id)?.name ?? `Circuit ${id}`)
 
   // Any manual filter change stops playback so the user's choice is never overwritten.
   const manual = (setter) => (event) => { setPlaying(false); setter(event.target.value) }
@@ -106,6 +117,7 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onR
     setLastYear('')
     setCountry('')
     setHighlightId(null)
+    setLinkedSet(null)
   }
 
   const highlightName = highlightId === null ? null : data?.tables.constructors.get(highlightId)?.name
@@ -173,6 +185,15 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onR
               </select>
             </label>
             <button type="button" className="text-button reset-filters" onClick={resetFilters} disabled={!filtered}>Reset</button>
+            {linkedSet && (
+              <p className="linked-set" role="status">
+                <span>
+                  From Races: {linkedSet.values.length} {linkedSet.kind === 'countries' ? 'countries' : 'circuits'}
+                  {' '}<small>({linkedNames.join(', ')})</small>
+                </span>
+                <button type="button" className="text-button" onClick={() => setLinkedSet(null)}>Show all circuits</button>
+              </p>
+            )}
           </section>
 
           <section className="driver-overview" aria-label="Selection summary">
@@ -232,6 +253,16 @@ export default function CircuitExplorer({ onHome, onDrivers, onConstructors, onR
               board={board}
               circuitCount={summaries.size}
               constructors={data.tables.constructors}
+              drivers={data.tables.drivers}
+              onOpenDrivers={(marks) => onDrivers?.(marks)}
+              onOpenConstructors={(marks) => onConstructors?.(marks.map((mark) => ({
+                ...mark, name: data.tables.constructors.get(mark.constructorId)?.name ?? null,
+              })))}
+              onOpenRaces={(circuitId, years) => onRaces?.({
+                circuitId,
+                fromYear: years ? years.fromYear : parseYear(fromYear),
+                toYear: years ? years.toYear : parseYear(lastYear),
+              })}
               highlightId={highlightId}
               onHighlight={setHighlightId}
               onClose={() => setSelectedId(null)}

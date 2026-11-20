@@ -19,9 +19,11 @@ function formatRaceDate(value) {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
 }
 
-export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenDrivers, onOpenConstructors }) {
+export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenDrivers, onOpenConstructors, onOpenCircuits, onOpenCountries }) {
   const linked = cell.entries.filter((entry) => entry.driverId != null)
   const linkedTeams = cell.entries.filter((entry) => entry.constructorId != null)
+  const linkedCircuits = cell.entries.filter((entry) => entry.circuitId != null)
+  const linkedCountries = cell.entries.filter((entry) => entry.country != null)
   const titleId = useId()
   const panelRef = useRef(null)
   const [position, setPosition] = useState(() => placePanel(index))
@@ -90,8 +92,30 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenD
           <thead>
             <tr>
               <th scope="col">Date</th>
-              <th scope="col">Pays</th>
-              <th scope="col">Circuit</th>
+              <th scope="col">
+                {linkedCountries.length ? (
+                  <button
+                    type="button"
+                    className="driver-link driver-link--header"
+                    title="Afficher tous les pays de cette case dans la visualisation Circuits"
+                    onClick={() => onOpenCountries?.(linkedCountries)}
+                  >
+                    Pays
+                  </button>
+                ) : 'Pays'}
+              </th>
+              <th scope="col">
+                {linkedCircuits.length ? (
+                  <button
+                    type="button"
+                    className="driver-link driver-link--header"
+                    title="Afficher tous les circuits de cette case dans la visualisation Circuits"
+                    onClick={() => onOpenCircuits?.(linkedCircuits)}
+                  >
+                    Circuit
+                  </button>
+                ) : 'Circuit'}
+              </th>
               <th scope="col">
                 {linked.length ? (
                   <button
@@ -122,8 +146,30 @@ export default function GridDetailPanel({ cell, index, onClose, onFocus, onOpenD
             {cell.entries.map((entry) => (
               <tr key={entry.id}>
                 <td>{formatRaceDate(entry.date)}</td>
-                <td>{entry.countryLabel}</td>
-                <td>{entry.circuitName}</td>
+                <td>
+                  {entry.country == null ? entry.countryLabel : (
+                    <button
+                      type="button"
+                      className="driver-link"
+                      title={`Afficher les circuits de ce pays en ${entry.year} dans la visualisation Circuits`}
+                      onClick={() => onOpenCountries?.([entry])}
+                    >
+                      {entry.countryLabel}
+                    </button>
+                  )}
+                </td>
+                <td>
+                  {entry.circuitId == null ? entry.circuitName : (
+                    <button
+                      type="button"
+                      className="driver-link"
+                      title={`Afficher ce circuit en ${entry.year} dans la visualisation Circuits`}
+                      onClick={() => onOpenCircuits?.([entry])}
+                    >
+                      {entry.circuitName}
+                    </button>
+                  )}
+                </td>
                 <td>
                   {entry.driverId == null ? entry.driverName : (
                     <button type="button" className="driver-link" onClick={() => onOpenDrivers?.([entry])}>

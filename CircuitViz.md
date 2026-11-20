@@ -14,11 +14,12 @@ The page is [`CircuitExplorer.jsx`](src/CircuitExplorer.jsx), opened with the
 
 | File | Key and purpose |
 |---|---|
-| `results.csv` | `resultId`; links race and constructor; supplies the official classified `position` |
+| `results.csv` | `resultId`; links race, driver and constructor; supplies the official classified `position` |
 | `races.csv` | `raceId`; season, round, name and `circuitId` |
 | `constructors.csv` | `constructorId`; name and `constructorRef` (color key) |
 | `circuits.csv` | `circuitId`; name, location, country, latitude and longitude |
-| `drivers.csv`, `status.csv` | Loaded only because the shared [`loadF1Data.js`](src/lib/loadF1Data.js) cache also serves the Drivers page; not used by this map |
+| `drivers.csv` | `driverId`; winning driver names in the pinned season of the circuit panel only (not used by the map) |
+| `status.csv` | Loaded only because the shared [`loadF1Data.js`](src/lib/loadF1Data.js) cache also serves the Drivers page; not used here |
 
 Not used: `sprint_results.csv`, standings, qualifying, lap times and pit stops.
 
@@ -110,10 +111,12 @@ The side panel sits to the right of the map on wide screens and below it under 1
 
 ### Pie mode (several seasons selected)
 
-The **Dots / Pie charts** toggle above the map switches the active markers to pies. It is
-disabled when the filtered races cover a single season, because then each circuit has a
-single race and a pie would always be a full disc. The page falls back to dots in that
-case, during playback for example, and returns to pies when the range widens again.
+Pies are the **default** marker style. The **Dots / Pie charts** toggle above the map
+switches the active markers back to dots. Pies are disabled when the filtered races cover
+a single season, because then each circuit has a single race and a pie would always be a
+full disc. The page falls back to dots in that case (during playback, or when opened from
+a Races row on one season) with the note "Pie charts need more than one season", and
+returns to pies when the range widens again.
 
 | Channel | Meaning |
 |---|---|
@@ -179,6 +182,7 @@ range are left blank.
 | Gray (theme border color) | Circuit not used that season |
 | Hatched gray | Grand Prix held but no classified winner |
 | Accent outline | Hovered or focused season (interaction, not data) |
+| Heading-color outline | Pinned (selected) season (interaction, not data) |
 
 The country filter does not change the cells, since the circuit's country is fixed.
 A summary line above the grid gives "Used in N of M seasons (from–to)".
@@ -205,6 +209,14 @@ A summary line above the grid gives "Used in N of M seasons (from–to)".
   `aria-label` and title. A legend lists team color, not used, several Grands Prix and
   (when present) no classified winner. The grid is one tab stop: arrow keys move by a
   season (left/right) or a decade (up/down), and Home/End jump to the range bounds.
+- **Links to the other views (circuit selected):** a line under the circuit name reads
+  "Open this circuit's winners: N winning drivers · N winning constructors · Grid → finish
+  in Races". Selecting a season cell (click, Enter or Space) pins it: the line under the
+  grid becomes a box listing each Grand Prix of that season with its winning driver and
+  constructor as links, plus "Grid → finish at this circuit in YEAR". Hovering another
+  season previews its text in place of the box; leaving the grid brings the box back.
+  Selecting the pinned cell again, or Unpin, releases it. Seasons where the circuit was
+  not used cannot be pinned.
 
 ## Interactions
 
@@ -218,12 +230,33 @@ A summary line above the grid gives "Used in N of M seasons (from–to)".
   in the archive. Clicking a bar in either panel list toggles the same highlight.
 - **Select a circuit:** click a marker, or Tab to it and press Enter or Space. Clicking it
   again, clicking the empty map or "← All circuits" returns to the leaderboard.
-- **Dots / Pie charts:** changes only the marker style, not the data. It is disabled for a
-  single season, with a note if pies were chosen.
+- **Dots / Pie charts:** changes only the marker style, not the data. Pie charts is the
+  default. It is disabled for a single season, with a note while pies are chosen.
 - **Zoom/pan:** drag, scroll wheel, or +, − and Reset buttons. This changes the presentation
   only. Zoom transitions are skipped with `prefers-reduced-motion`. Resizing the window
   resets the zoom.
-- **Reset** clears seasons, country and highlight. It keeps the selected circuit.
+- **Reset** clears seasons, country, highlight and the Races selection. It keeps the
+  selected circuit.
+- **Opening from Races:** a circuit name in a Races square list opens this page on that
+  start's season with the circuit selected; a country name opens it on that season with
+  the Host country filter set. The Circuit / Pays column headers send every circuit /
+  host country of the square, with seasons from its first to its last start. Several
+  circuits or countries become a **Races selection**: a line under the filters reads
+  "From Races: N circuits (names)" or "N countries", and only races at those circuits or
+  in those countries count, combined with the other filters; every other circuit is faint.
+  "Show all circuits" or Reset removes it. A single circuit or country falls back to the
+  name-click behavior. The section capsule opens the page without presets.
+- **Cross-view navigation** (built by `winnerMarks` in [`circuitWins.js`](src/lib/circuitWins.js),
+  wired in [`App.jsx`](src/App.jsx)), using the same focus parameters as the Races page:
+  - *Winning driver(s)* opens the Drivers championship timeline with one lane per driver
+    and, outlined, every season in which that driver won here (within the season filter).
+    A winner name in a pinned season opens that driver alone with that season outlined.
+  - *Winning constructor(s)* opens the Constructors page filtered on those teams with
+    their winning seasons here outlined (that page only covers 2000–2025, see its notes).
+  - *Grid → finish* opens the Races matrix filtered on this circuit and on the current
+    From/To seasons, or on the pinned season alone. The Races filters stay editable.
+  - Races with no classified winner add no driver or constructor. The host-country filter
+    is not passed on, since the circuit already fixes it.
 
 Loading, CSV error with retry, invalid season range and "no Grand Prix matches these
 filters" states are handled.
@@ -253,6 +286,8 @@ filters" states are handled.
   leaderboard counts, the radius scale and its fixed archive domain, marker kinds and
   colors in both modes, pie win shares (top constructors, Others, highlight, empty), the
   season timeline over the filter range (unused seasons, two races in one season, reversed
-  range) and its decade slots, and a
+  range) and its decade slots, the Races selection filters (`circuitIds`, `countries`) and the
+  focus built from a list of entries (`circuitFocusFor`), the winning driver/constructor pairs kept per race and the
+  deduplicated navigation marks built from them (`winnerMarks`), and a
   real-archive check: every race joins a circuit, win totals reconcile, and Ferrari
   leads Monza. Run the [README validation commands](README.md#validation).

@@ -1,18 +1,29 @@
 /**
  * Turn indexed loadF1Data tables into one record per Grand Prix that has results:
- * { raceId, year, round, name, circuitId, constructorIds }.
+ * { raceId, year, round, name, circuitId, constructorIds, winners }.
  *
  * A win is a result with official classified position 1 (never positionOrder).
  * constructorIds holds the distinct constructors credited with that win: usually one,
  * occasionally none (no classified P1), and two only for shared drives in different cars.
+ * winners holds the distinct { driverId, constructorId } pairs credited with P1, in the
+ * same cases (several drivers only for shared drives).
  * Races without a circuit or season are excluded. Output is chronological.
  */
 export function buildRaceWinners({ races, results }) {
   const winnersByRace = new Map()
+  const driversByRace = new Map()
   for (const result of results.values()) {
-    if (!winnersByRace.has(result.raceId)) winnersByRace.set(result.raceId, new Set())
+    if (!winnersByRace.has(result.raceId)) {
+      winnersByRace.set(result.raceId, new Set())
+      driversByRace.set(result.raceId, new Map())
+    }
     if (result.position === 1 && result.constructorId !== null) {
       winnersByRace.get(result.raceId).add(result.constructorId)
+      if (result.driverId !== null) {
+        driversByRace.get(result.raceId).set(`${result.driverId}:${result.constructorId}`, {
+          driverId: result.driverId, constructorId: result.constructorId,
+        })
+      }
     }
   }
 
@@ -27,6 +38,8 @@ export function buildRaceWinners({ races, results }) {
       name: race.name,
       circuitId: race.circuitId,
       constructorIds: [...winners].sort((a, b) => a - b),
+      winners: [...driversByRace.get(raceId).values()]
+        .sort((a, b) => a.driverId - b.driverId || a.constructorId - b.constructorId),
     })
   }
   return out.sort((a, b) => a.year - b.year || (a.round ?? 0) - (b.round ?? 0) || a.raceId - b.raceId)
@@ -49,13 +62,41 @@ export function circuitSpans(raceWinners) {
 
 /**
  * Inclusive season range plus an optional host country. Null bounds are open.
+ * circuitIds / countries (arrays, from another view's selection) further restrict the races
+ * to those circuits / host countries; null means no restriction, an empty array matches nothing.
  * A reversed range (fromYear > toYear) matches nothing.
  */
-export function filterRaces(raceWinners, circuits, { fromYear = null, toYear = null, country = null } = {}) {
+export function filterRaces(raceWinners, circuits, {
+  fromYear = null, toYear = null, country = null, circuitIds = null, countries = null,
+} = {}) {
   if (fromYear !== null && toYear !== null && fromYear > toYear) return []
-  return raceWinners.filter((race) => (fromYear === null || race.year >= fromYear)
-    && (toYear === null || race.year <= toYear)
-    && (country === null || circuits.get(race.circuitId)?.country === country))
+  const circuitSet = circuitIds === null ? null : new Set(circuitIds)
+  const countrySet = countries === null ? null : new Set(countries)
+  return raceWinners.filter((race) => {
+    const host = circuits.get(race.circuitId)?.country
+    return (fromYear === null || race.year >= fromYear)
+      && (toYear === null || race.year <= toYear)
+      && (country === null || host === country)
+      && (circuitSet === null || circuitSet.has(race.circuitId))
+      && (countrySet === null || countrySet.has(host))
+  })
+}
+
+/**
+ * Circuits-page focus for a list of race entries (rows with circuitId, country and year),
+ * by 'circuit' or by 'country'. Seasons span the entries' first to last year. A single
+ * circuit is selected (circuitId) and a single country uses the country filter (country);
+ * several give circuitIds / countries. Returns null when no entry has the key.
+ */
+export function circuitFocusFor(entries, by) {
+  const key = by === 'country' ? 'country' : 'circuitId'
+  const kept = entries.filter((entry) => entry[key] != null)
+  if (!kept.length) return null
+  const values = [...new Set(kept.map((entry) => entry[key]))]
+  const years = kept.map((entry) => entry.year).filter(Number.isFinite)
+  const range = years.length ? { fromYear: Math.min(...years), toYear: Math.max(...years) } : { fromYear: null, toYear: null }
+  if (values.length === 1) return { [key]: values[0], ...range }
+  return { [by === 'country' ? 'countries' : 'circuitIds']: values, ...range }
 }
 
 /**
@@ -155,4 +196,23 @@ export function decadeRows(timeline) {
     rows.get(decade)[season.year - decade] = season
   }
   return [...rows].map(([decade, slots]) => ({ decade, slots }))
+}
+
+/**
+ * Navigation marks for the winners of the given races: one { driverId, year } per winning
+ * driver-season and one { constructorId, year } per winning constructor-season, deduplicated
+ * and in chronological order. Races without a classified winner contribute nothing.
+ */
+export function winnerMarks(races) {
+  const drivers = new Map()
+  const constructors = new Map()
+  for (const race of races) {
+    for (const winner of race.winners ?? []) {
+      drivers.set(`${winner.driverId}:${race.year}`, { driverId: winner.driverId, year: race.year })
+    }
+    for (const constructorId of race.constructorIds) {
+      constructors.set(`${constructorId}:${race.year}`, { constructorId, year: race.year })
+    }
+  }
+  return { drivers: [...drivers.values()], constructors: [...constructors.values()] }
 }

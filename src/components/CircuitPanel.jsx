@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { decadeRows, seasonTimeline } from '../lib/circuitWins.js'
+import { decadeRows, seasonTimeline, winnerMarks } from '../lib/circuitWins.js'
 import { getTeamColor } from '../lib/teamColors.js'
 
 const LEADERBOARD_LIMIT = 10
@@ -89,19 +89,93 @@ function raceBackground(race, constructors) {
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+const countOf = (marks, key) => new Set(marks.map((mark) => mark[key])).size
+
+/**
+ * Links for every winner of the given races: they open the Drivers or Constructors view
+ * focused on those winners and their winning seasons, or Races filtered on this circuit.
+ */
+function WinnerLinks({ races, label, links }) {
+  const { drivers, constructors } = winnerMarks(races)
+  const driverCount = countOf(drivers, 'driverId')
+  const constructorCount = countOf(constructors, 'constructorId')
+  return (
+    <div className="circuit-links" role="group" aria-label={`Open ${label}`}>
+      <span>Open {label}:</span>
+      <button type="button" className="circuit-link" disabled={!driverCount} onClick={() => links.drivers(drivers)}>
+        {driverCount === 1 ? '1 winning driver' : `${driverCount} winning drivers`}
+      </button>
+      <button type="button" className="circuit-link" disabled={!constructorCount} onClick={() => links.constructors(constructors)}>
+        {constructorCount === 1 ? '1 winning constructor' : `${constructorCount} winning constructors`}
+      </button>
+      <button type="button" className="circuit-link" onClick={() => links.races()}>Grid → finish in Races</button>
+    </div>
+  )
+}
+
+/** The pinned season: each Grand Prix with its winning drivers and constructors as links. */
+function PinnedSeason({ season, constructors, drivers, links, onClose }) {
+  return (
+    <div className="season-pick">
+      <div className="season-pick__head">
+        <strong>{season.year}</strong>
+        <button type="button" className="text-button" onClick={onClose}>Unpin</button>
+      </div>
+      <ul aria-label={`Winners in ${season.year}`}>
+        {season.races.map((race) => (
+          <li key={race.raceId}>
+            <span className="season-pick__race">{race.name}</span>
+            {race.winners.length === 0 ? <span>No classified winner</span> : race.winners.map((winner) => {
+              const team = teamOf(constructors, winner.constructorId)
+              return (
+                <span key={`${winner.driverId}:${winner.constructorId}`} className="season-pick__winner">
+                  <button
+                    type="button"
+                    className="circuit-link"
+                    title={`Open this driver's ${season.year} season in Drivers`}
+                    onClick={() => links.drivers([{ driverId: winner.driverId, year: season.year }])}
+                  >
+                    {drivers.get(winner.driverId)?.name ?? `Driver ${winner.driverId}`}
+                  </button>
+                  <span className="legend-dot" style={{ backgroundColor: team.color }} />
+                  <button
+                    type="button"
+                    className="circuit-link"
+                    title={`Open this constructor's ${season.year} season in Constructors`}
+                    onClick={() => links.constructors([{ constructorId: winner.constructorId, year: season.year }])}
+                  >
+                    {team.name}
+                  </button>
+                </span>
+              )
+            })}
+          </li>
+        ))}
+      </ul>
+      <button type="button" className="circuit-link" onClick={() => links.races({ fromYear: season.year, toYear: season.year })}>
+        Grid → finish at this circuit in {season.year}
+      </button>
+    </div>
+  )
+}
+
 /**
  * Season-by-season history over the whole filtered range: one row per decade, one cell per
  * season. Cells are colored by the winner, split when the circuit hosted several Grands Prix
  * that season, gray when it was not used. Arrow keys move between seasons (one tab stop).
  */
-function SeasonHistory({ races, seasonRange, constructors }) {
+function SeasonHistory({ races, seasonRange, constructors, drivers, links }) {
   const timeline = useMemo(() => seasonTimeline(races, seasonRange.from, seasonRange.to), [races, seasonRange.from, seasonRange.to])
   const rows = useMemo(() => decadeRows(timeline), [timeline])
   const [activeYear, setActiveYear] = useState(null)
+  const [pinnedYear, setPinnedYear] = useState(null)
   const [focusYear, setFocusYear] = useState(timeline.find((season) => season.races.length)?.year ?? seasonRange.from)
   const cellRefs = useRef(new Map())
   const heldSeasons = timeline.filter((season) => season.races.length).length
   const active = timeline.find((season) => season.year === activeYear)
+  const pinned = timeline.find((season) => season.year === pinnedYear && season.races.length)
+  // Hovering another season previews it; otherwise the pinned season keeps its links.
+  const showPinned = pinned && (!active || active === pinned)
 
   function moveFocus(event, year) {
     const steps = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -10, ArrowDown: 10 }
@@ -119,7 +193,7 @@ function SeasonHistory({ races, seasonRange, constructors }) {
   return (
     <div className="season-history">
       <p className="season-history__summary">
-        Used in <strong>{heldSeasons}</strong> of {timeline.length} seasons ({seasonRange.from}–{seasonRange.to}). Read left to right, one row per decade.
+        Used in <strong>{heldSeasons}</strong> of {timeline.length} seasons ({seasonRange.from}–{seasonRange.to}). Read left to right, one row per decade. Select a season to open its winners in the other views.
       </p>
       <div className="season-grid" role="group" aria-label="Winning constructor by season">
         <div className="season-grid__row season-grid__row--head" aria-hidden="true">
@@ -139,9 +213,11 @@ function SeasonHistory({ races, seasonRange, constructors }) {
                   key={index}
                   type="button"
                   ref={(node) => { if (node) cellRefs.current.set(season.year, node); else cellRefs.current.delete(season.year) }}
-                  className={`season-cell season-cell--${state}${season.year === activeYear ? ' is-active' : ''}`}
+                  className={`season-cell season-cell--${state}${season.year === activeYear ? ' is-active' : ''}${season.year === pinnedYear ? ' is-pinned' : ''}`}
                   tabIndex={season.year === focusYear ? 0 : -1}
                   aria-label={label}
+                  aria-pressed={season.races.length ? season.year === pinnedYear : undefined}
+                  onClick={() => { if (season.races.length) setPinnedYear((current) => (current === season.year ? null : season.year)) }}
                   title={label}
                   onPointerEnter={() => setActiveYear(season.year)}
                   onPointerLeave={() => setActiveYear(null)}
@@ -158,9 +234,13 @@ function SeasonHistory({ races, seasonRange, constructors }) {
           </div>
         ))}
       </div>
-      <p className="season-history__readout" aria-hidden="true">
-        {active ? seasonText(active, constructors) : 'Hover or focus a season (arrow keys move) to see its Grand Prix and winner.'}
-      </p>
+      {showPinned ? (
+        <PinnedSeason season={pinned} constructors={constructors} drivers={drivers} links={links} onClose={() => setPinnedYear(null)} />
+      ) : (
+        <p className="season-history__readout" aria-hidden="true">
+          {active ? seasonText(active, constructors) : 'Hover or focus a season (arrow keys move) to see its Grand Prix and winner. Select it to pin links to its winners.'}
+        </p>
+      )}
       <ul className="season-history__key" aria-label="History legend">
         <li><span className="season-cell season-cell--sample" />Won by the team in that color</li>
         <li><span className="season-cell season-cell--unused" />Circuit not used that season</li>
@@ -173,7 +253,12 @@ function SeasonHistory({ races, seasonRange, constructors }) {
   )
 }
 
-function CircuitDetail({ circuit, summary, constructors, highlightId, onHighlight, onClose, rangeLabel, seasonRange }) {
+function CircuitDetail({ circuit, summary, constructors, drivers, highlightId, onHighlight, onClose, rangeLabel, seasonRange, onOpenDrivers, onOpenConstructors, onOpenRaces }) {
+  const links = {
+    drivers: (marks) => onOpenDrivers?.(marks),
+    constructors: (marks) => onOpenConstructors?.(marks),
+    races: (years) => onOpenRaces?.(circuit.circuitId, years),
+  }
   const [expanded, setExpanded] = useState(false)
   const standings = summary && !expanded ? summary.standings.slice(0, STANDINGS_LIMIT) : summary?.standings
   const place = [circuit.location, circuit.country].filter(Boolean).join(', ')
@@ -192,6 +277,8 @@ function CircuitDetail({ circuit, summary, constructors, highlightId, onHighligh
         <p className="circuit-panel__empty">This circuit hosted no Grand Prix in the selected filters.</p>
       ) : (
         <>
+          <WinnerLinks races={summary.races} label="this circuit's winners" links={links} />
+
           <dl className="circuit-facts">
             <div><dt>Grands Prix</dt><dd>{summary.raceCount}</dd></div>
             <div><dt>Seasons</dt><dd>{summary.firstYear === summary.lastYear ? summary.firstYear : `${summary.firstYear}–${summary.lastYear}`}</dd></div>
@@ -226,7 +313,7 @@ function CircuitDetail({ circuit, summary, constructors, highlightId, onHighligh
           )}
 
           <h3>Season-by-season winners</h3>
-          <SeasonHistory key={`${seasonRange.from}-${seasonRange.to}`} races={summary.races} seasonRange={seasonRange} constructors={constructors} />
+          <SeasonHistory key={`${seasonRange.from}-${seasonRange.to}`} races={summary.races} seasonRange={seasonRange} constructors={constructors} drivers={drivers} links={links} />
         </>
       )}
     </>

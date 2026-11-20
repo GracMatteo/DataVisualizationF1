@@ -8,6 +8,7 @@ import SectionNav from './components/SectionNav.jsx'
 import { formatPercent, formatRaces, formatSignedPlaces } from './lib/formatSigned.js'
 import { GRID_HEAT_HIGH, GRID_HEAT_LOW } from './lib/gridHeat.js'
 import { binGridFinish, circuitMatchesQuery, circuitOptions, filterGridStarts, matchesGridFilter, rankGridGroups, summarizePlaceGaps, summarizePoleStats } from './lib/gridFinish.js'
+import { circuitFocusFor } from './lib/circuitWins.js'
 import { loadCircuitBoard } from './lib/loadCircuitBoard.js'
 import './Dashboard.css'
 import './Races.css'
@@ -20,14 +21,16 @@ function formatCount(value) {
 // and the per-circuit gap chart again. The squares stay on the page either way.
 const showPlaceRank = false
 
-export default function Races({ onBack, onDrivers, onConstructors, onRaces, onCircuits }) {
+const focusValue = (value) => (value == null ? '' : String(value))
+
+export default function Races({ onBack, onDrivers, onConstructors, onRaces, onCircuits, raceFocus }) {
   const [board, setBoard] = useState(null)
   const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
-  const [circuitId, setCircuitId] = useState('')
+  const [circuitId, setCircuitId] = useState(() => focusValue(raceFocus?.circuitId))
   const [circuitQuery, setCircuitQuery] = useState('')
-  const [fromYear, setFromYear] = useState('')
-  const [toYear, setToYear] = useState('')
+  const [fromYear, setFromYear] = useState(() => focusValue(raceFocus?.fromYear))
+  const [toYear, setToYear] = useState(() => focusValue(raceFocus?.toYear))
   const [rankMode, setRankMode] = useState('circuit')
   const [panels, setPanels] = useState({ keys: [], front: null })
   const rankPanelRef = useRef(null)
@@ -404,6 +407,8 @@ export default function Races({ onBack, onDrivers, onConstructors, onRaces, onCi
               onFocus={() => focusPanel(cell.key)}
               onOpenDrivers={(entries) => onDrivers?.(entries.map((entry) => ({ driverId: entry.driverId, year: entry.year })))}
               onOpenConstructors={(entries) => onConstructors?.(entries.map((entry) => ({ constructorId: entry.constructorId, name: entry.constructorName, year: entry.year })))}
+              onOpenCircuits={(entries) => onCircuits?.(circuitFocusFor(entries, 'circuit'))}
+              onOpenCountries={(entries) => onCircuits?.(circuitFocusFor(entries, 'country'))}
             />
           ))}
           <footer className="dashboard-footer">

@@ -151,7 +151,9 @@ French captions on the page:
   for every exact gap. The gap rows only count starts. A second click on the summary bar, or Revoir tous les circuits, restores
   the comparison. Par pays only regroups that comparison.
 - Filters on the squares: one circuit or all circuits, an inclusive first season, an inclusive
-  last season, and Réinitialiser.
+  last season, and Réinitialiser. Opening this page from the Circuits page ("Grid → finish")
+  preselects that circuit and its season range (or one pinned season); the section capsule
+  opens it unfiltered.
   The circuit menu counts distinct races that still have a classified start, not driver rows:
   two starters in the same race count as one course. The busiest circuit is the first option.
   The search box matches the circuit name or the country, without accents, and only narrows
@@ -172,6 +174,17 @@ French captions on the page:
   for every classified start in that grid and finish, in season and round order. It is not
   truncated. `P1` stays `P1`. A missing date is —. The gap chart does not open this list.
   The panel is wide enough to show the constructor without a horizontal scrollbar.
+- A circuit name in that list opens the Circuits map on the season of that start
+  (From = To = that season) with that circuit selected in the side panel.
+- A country name opens the Circuits map on the season of that start with the Host country
+  filter set to that country (the archive's English country name, shown in French here).
+  No circuit is selected, so the panel shows the constructor leaderboard for that country.
+- The Circuit column header opens the Circuits map restricted to every circuit of the
+  square, and the Pays column header restricts it to every host country of the square.
+  Seasons run from the square's first to its last start (seasons in between are included
+  even without a start in the square). If the square has a single circuit, it is selected
+  as with a name click; a single country sets the Host country filter instead. The
+  selection is built by `circuitFocusFor` in [`circuitWins.js`](src/lib/circuitWins.js).
 - A driver name in that list opens the driver championship timeline with that driver alone.
   The season of the selected start is outlined in red on that timeline. A season with no
   championship standing has no dot to outline.
